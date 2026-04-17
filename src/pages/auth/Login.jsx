@@ -1,42 +1,9 @@
 import React, { useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import FacebookIcon from '../../assets/icons/Facebook.svg';
 import GoogleIcon from '../../assets/icons/Google.svg';
 import AppleIcon from '../../assets/icons/Apple.svg';
-
-function UserRoundedSvg({ color }) {
-    return (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className="w-6 h-6 shrink-0">
-            <circle cx="12" cy="6" r="4" fill={color} />
-            <ellipse cx="12" cy="17" rx="7" ry="4" fill={color} />
-        </svg>
-    );
-}
-
-function ExcludeSvg({ color }) {
-    return (
-        <svg width="15" height="17" viewBox="0 0 15 17" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className="w-5 h-5 shrink-0">
-            <path d="M7.07031 0C9.62759 0 11.6855 2.01272 11.6855 4.49707V5.77441C13.1207 6.22238 14.1668 7.52154 14.167 9.07324V13.1875C14.167 15.1087 12.574 16.6669 10.6104 16.667H3.55762C1.59308 16.667 0 15.1087 0 13.1875V9.07324C0.000191835 7.52154 1.04713 6.22238 2.48145 5.77441V4.49707C2.48991 2.01283 4.54705 0.00017002 7.07031 0ZM7.0791 9.4873C6.67276 9.4873 6.34296 9.80969 6.34277 10.207V12.0459C6.34284 12.4516 6.67269 12.7744 7.0791 12.7744C7.49398 12.7744 7.82415 12.4516 7.82422 12.0459V10.207C7.82404 9.80969 7.49391 9.48731 7.0791 9.4873ZM7.08789 1.44922C5.36892 1.44922 3.97136 2.80767 3.96289 4.48047V5.59473H10.2041V4.49707C10.2041 2.8161 8.80671 1.44939 7.08789 1.44922Z" fill={color} />
-        </svg>
-    );
-}
-
-function HideSvg({ color }) {
-    return (
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className="w-5 h-5 shrink-0">
-            <path d="M3 10s2.8-4.5 7-4.5S17 10 17 10s-2.8 4.5-7 4.5S3 10 3 10Z" stroke={color} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M4 4l12 12" stroke={color} strokeWidth="1.6" strokeLinecap="round" />
-        </svg>
-    );
-}
-
-function EyeSvg({ color }) {
-    return (
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className="w-5 h-5 shrink-0">
-            <path d="M3 10s2.8-4.5 7-4.5S17 10 17 10s-2.8 4.5-7 4.5S3 10 3 10Z" stroke={color} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-            <circle cx="10" cy="10" r="2" stroke={color} strokeWidth="1.6" />
-        </svg>
-    );
-}
+import { UserRoundedSvg, ExcludeSvg, HideSvg, EyeSvg } from '../../constants/loginIcons';
 
 export default function Login() {
     const emailInputRef = useRef(null);
@@ -141,7 +108,7 @@ export default function Login() {
 
                 <button
                     type="submit"
-                    className="w-full bg-[#6A5AE0] text-white font-medium py-4 px-4 rounded-full hover:bg-[#5a4ad0] transition-colors shadow-[4px_8px_24px_0_rgba(77,93,250,0.25)] cursor-pointer"
+                    className="w-full bg-[#6A5AE0] text-white font-normal py-4 px-4 rounded-full hover:bg-[#5a4ad0] transition-colors shadow-[4px_8px_24px_0_rgba(77,93,250,0.25)] cursor-pointer"
                 >
                     Đăng nhập
                 </button>
@@ -175,9 +142,9 @@ export default function Login() {
 
             <div className="text-center text-sm">
                 <span className="text-[#9E9E9E] font-light">Đăng ký tài khoản mới? </span>
-                <a href="#" className="text-[#6A5AE0] font-normal hover:underline">
+                <Link to="/onboard" className="text-[#6A5AE0] font-normal hover:underline">
                     Đăng ký
-                </a>
+                </Link>
             </div>
         </div>
     );
