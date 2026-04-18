@@ -1,5 +1,5 @@
 import { Navigate } from 'react-router-dom';
-import MainLayout from '../layouts/user/MainLayout';
+import MainLayout from '../layouts/auth/MainLayout';
 import Login from '../pages/auth/Login';
 import Onboard from '../pages/auth/Onboard';
 import Register from '../pages/auth/Register';

@@ -1,0 +1,95 @@
+import React, { useState } from 'react';
+import Logo2 from '../../assets/icons/logo2.svg';
+import { SIDEBAR_OPTIONS, THEME_OPTIONS } from '../../constants/sideBar';
+
+const ACTIVE_MENU_LABEL = 'Thống kê';
+const ACTIVE_THEME_LABEL = 'Sáng';
+
+function SidebarItem({ icon: Icon, label, active, onClick }) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            aria-pressed={active}
+            className={`relative flex h-[50px] w-[220px] items-center overflow-hidden text-left transition-colors duration-200 cursor-pointer ${active ? 'rounded-br-[20px] rounded-tr-[20px] bg-[rgba(105,73,255,0.1)]' : 'hover:bg-[rgba(113,82,243,0.04)]'}`}
+        >
+            <span
+                className={`absolute left-0 top-0 h-full w-[3px] rounded-r-[10px] bg-[#7152f3] transition-opacity duration-200 ${active ? 'opacity-100' : 'opacity-0'}`}
+            />
+            <span className="relative z-10 ml-[19px] flex h-6 w-6 shrink-0 items-center justify-center transition-colors duration-200">
+                <Icon color={active ? '#6949FF' : '#212121'} />
+            </span>
+            <span
+                className={`relative z-10 ml-4 text-[16px] leading-6 transition-colors duration-200 ${active ? 'font-semibold text-[#6949FF]' : 'font-normal text-[#212121]'}`}
+            >
+                {label}
+            </span>
+        </button>
+    );
+}
+
+function ThemeToggleItem({ icon: Icon, label, active, onClick }) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            aria-pressed={active}
+            className={`relative z-10 flex h-full w-[110px] items-center gap-2.5 px-[18px] text-left transition-colors duration-200 ${active ? 'cursor-default' : 'cursor-pointer'}`}
+        >
+            <Icon color={active ? '#FFFFFF' : '#16151C'} />
+            <span className={`text-[16px] leading-6 transition-colors duration-200 ${active ? 'font-normal text-white' : 'font-normal text-[#16151C]'}`}>
+                {label}
+            </span>
+        </button>
+    );
+}
+
+export default function SideBar() {
+    const [activeMenuLabel, setActiveMenuLabel] = useState(ACTIVE_MENU_LABEL);
+    const [activeThemeLabel, setActiveThemeLabel] = useState(ACTIVE_THEME_LABEL);
+
+    return (
+        <aside className="relative h-full w-[280px] shrink-0 overflow-hidden rounded-[20px] bg-[#EDEFFF]">
+            <div className="absolute left-[30px] top-[31px] flex w-[140px] items-center justify-between">
+                <img src={Logo2} alt="UTTQ" className="h-[38px] w-[38px] shrink-0" />
+                <span
+                    className="text-[32px] font-bold leading-[1.2] text-[#212121]"
+                    style={{ fontFamily: "'Zen Maru Gothic', sans-serif" }}
+                >
+                    UTTQ
+                </span>
+            </div>
+
+            <div className="absolute left-[30px] top-[110px] flex flex-col gap-2.5">
+                {SIDEBAR_OPTIONS.map((item) => (
+                    <SidebarItem
+                        key={item.label}
+                        icon={item.icon}
+                        label={item.label}
+                        active={item.label === activeMenuLabel}
+                        onClick={() => setActiveMenuLabel(item.label)}
+                    />
+                ))}
+            </div>
+
+            <div className="absolute bottom-[30px] left-[30px]">
+                <div className="relative h-[50px] w-[220px] overflow-hidden rounded-full bg-[rgba(105,73,255,0.1)]">
+                    <div
+                        className={`absolute left-0 top-0 h-full w-[110px] rounded-full bg-[#7152f3] transition-transform duration-300 ${activeThemeLabel === 'Tối' ? 'translate-x-full' : 'translate-x-0'}`}
+                    />
+                    <div className="relative flex h-full w-full items-center">
+                        {THEME_OPTIONS.map((item) => (
+                            <ThemeToggleItem
+                                key={item.label}
+                                icon={item.icon}
+                                label={item.label}
+                                active={item.label === activeThemeLabel}
+                                onClick={() => setActiveThemeLabel(item.label)}
+                            />
+                        ))}
+                    </div>
+                </div>
+            </div>
+        </aside>
+    );
+}
