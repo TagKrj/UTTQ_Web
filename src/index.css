@@ -21,3 +21,32 @@
 body {
     font-family: 'Zen Maru Gothic', sans-serif;
 }
+
+.thin-scrollbar {
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(113, 82, 243, 0.28) transparent;
+}
+
+.thin-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+.thin-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.thin-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(113, 82, 243, 0.28);
+    border: 1.5px solid transparent;
+    border-radius: 9999px;
+    background-clip: padding-box;
+}
+
+.thin-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(113, 82, 243, 0.42);
+    border: 1.5px solid transparent;
+    border-radius: 9999px;
+    background-clip: padding-box;
+}

@@ -1,8 +1,23 @@
 import React, { useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import Logo2 from '../../assets/icons/logo2.svg';
 import { SIDEBAR_OPTIONS, THEME_OPTIONS } from '../../constants/sideBar';
 
-const ACTIVE_MENU_LABEL = 'Thống kê';
+const MENU_ROUTE_MAP = {
+    '/': 'Thống kê',
+    '/statistical': 'Thống kê',
+    '/review': 'Ôn tập',
+    '/account': 'Tài khoản',
+    '/setting': 'Cài đặt',
+};
+
+const MENU_PATH_MAP = {
+    'Thống kê': '/statistical',
+    'Ôn tập': '/review',
+    'Tài khoản': '/account',
+    'Cài đặt': '/setting',
+};
+
 const ACTIVE_THEME_LABEL = 'Sáng';
 
 function SidebarItem({ icon: Icon, label, active, onClick }) {
@@ -45,8 +60,15 @@ function ThemeToggleItem({ icon: Icon, label, active, onClick }) {
 }
 
 export default function SideBar() {
-    const [activeMenuLabel, setActiveMenuLabel] = useState(ACTIVE_MENU_LABEL);
     const [activeThemeLabel, setActiveThemeLabel] = useState(ACTIVE_THEME_LABEL);
+    const location = useLocation();
+    const navigate = useNavigate();
+
+    const activeMenuLabel = MENU_ROUTE_MAP[location.pathname] ?? 'Thống kê';
+
+    const handleMenuClick = (label) => {
+        navigate(MENU_PATH_MAP[label] ?? '/statistical');
+    };
 
     return (
         <aside className="relative h-full w-[280px] shrink-0 overflow-hidden rounded-[20px] bg-[#EDEFFF]">
@@ -67,7 +89,7 @@ export default function SideBar() {
                         icon={item.icon}
                         label={item.label}
                         active={item.label === activeMenuLabel}
-                        onClick={() => setActiveMenuLabel(item.label)}
+                        onClick={() => handleMenuClick(item.label)}
                     />
                 ))}
             </div>
