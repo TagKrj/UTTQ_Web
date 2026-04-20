@@ -60,11 +60,22 @@ function getExerciseTone(progress) {
     };
 }
 
-function ExerciseCard({ exercise }) {
+function ExerciseCard({ exercise, onClick }) {
     const tone = getExerciseTone(exercise.progress);
 
     return (
-        <div className={`flex h-[76px] min-h-[76px] flex-none shrink-0 items-center overflow-hidden rounded-[20px] border-[1.5px] px-[30px] cursor-pointer hover:shadow-[2px_4px_12px_0_rgba(162,161,168,0.2)] transition-shadow ${tone.cardClass}`}>
+        <div
+            className={`flex h-[76px] min-h-[76px] flex-none shrink-0 cursor-pointer items-center overflow-hidden rounded-[20px] border-[1.5px] px-[30px] transition-shadow hover:shadow-[2px_4px_12px_0_rgba(162,161,168,0.2)] ${tone.cardClass}`}
+            onClick={onClick}
+            onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    onClick?.();
+                }
+            }}
+            role="button"
+            tabIndex={0}
+        >
             <div className="flex h-[58px] w-full flex-col justify-between">
                 <div className="flex items-center justify-between gap-4">
                     <p
@@ -170,7 +181,16 @@ export default function DetailSubject() {
 
                     <div className="flex flex-col gap-3 max-h-[700px] overflow-y-auto thin-scrollbar pb-10">
                         {subject.exercises.map((exercise) => (
-                            <ExerciseCard key={exercise.id} exercise={exercise} />
+                            <ExerciseCard
+                                key={exercise.id}
+                                exercise={exercise}
+                                onClick={() => navigate(`choose-method/${exercise.id}`, {
+                                    state: {
+                                        subject,
+                                        exercise,
+                                    },
+                                })}
+                            />
                         ))}
                     </div>
                 </div>

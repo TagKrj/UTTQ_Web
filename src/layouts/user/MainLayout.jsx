@@ -1,8 +1,11 @@
 import React from 'react';
+import { Outlet } from 'react-router-dom';
 import SideBar from './sideBar';
 import TopBar from './topBar';
 
 export default function MainLayout({ children }) {
+    const content = children ?? <Outlet />;
+
     return (
         <div className="flex h-screen w-full gap-5 bg-white p-5">
             <SideBar />
@@ -11,7 +14,7 @@ export default function MainLayout({ children }) {
                 <div className="flex h-full w-full flex-col gap-5 rounded-lg">
                     <TopBar />
                     <div className="min-h-0 flex-1 overflow-auto">
-                        {children}
+                        {content}
                     </div>
                 </div>
             </div>
