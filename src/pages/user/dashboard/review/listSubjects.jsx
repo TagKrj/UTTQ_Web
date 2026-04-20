@@ -1,27 +1,13 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Pagination from '../../../../components/pagination';
+import AddSubject from '../../../../components/popup/addSubject';
 import {
     SwitchSvg as SortIcon,
     editSvg as EditIcon,
     removeSvg as RemoveIcon,
 } from '../../../../constants/dashboardIcon';
-
-const TABLE_SUBJECTS = [
-    'Xác suất thống kê',
-    'Toán cao cấp',
-    'Lập trình hướng đối tượng',
-    'Cơ sở dữ liệu',
-    'Mạng máy tính',
-    'Phân tích thiết kế hệ thống',
-    'Hệ điều hành',
-    'Trí tuệ nhân tạo',
-];
-
-const TABLE_ROWS = Array.from({ length: 24 }, (_, index) => ({
-    id: index + 1,
-    subject: `${TABLE_SUBJECTS[index % TABLE_SUBJECTS.length]} ${index + 1}`,
-    documents: `${(index % 5) + 1} tài liệu đã tải`,
-}));
+import { REVIEW_SUBJECTS, createReviewSubject } from '../../../../utils/reviewSubjects';
 
 function PlusIcon() {
     return (
@@ -45,7 +31,10 @@ function ActionButton({ icon: Icon, label, onClick }) {
         <button
             type="button"
             aria-label={label}
-            onClick={onClick}
+            onClick={(event) => {
+                event.stopPropagation();
+                onClick?.(event);
+            }}
             className="flex h-7 w-7 cursor-pointer items-center justify-center text-[#16151c] transition-colors duration-200 hover:text-[#7152f3]"
         >
             <Icon color="currentColor" />
@@ -53,9 +42,20 @@ function ActionButton({ icon: Icon, label, onClick }) {
     );
 }
 
-function RowItem({ subject, documents, onDelete }) {
+function RowItem({ subject, documents, onClick, onDelete }) {
     return (
-        <div className="grid grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)_96px] items-center rounded-[10px] border-b border-[#F3F4F6] py-5 transition-colors hover:bg-[#EDEFFF] last:border-b-0">
+        <div
+            className="grid cursor-pointer grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)_96px] items-center rounded-[10px] border-b border-[#F3F4F6] py-5 transition-colors hover:bg-[#EDEFFF] last:border-b-0"
+            onClick={onClick}
+            onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    onClick?.();
+                }
+            }}
+            role="button"
+            tabIndex={0}
+        >
             <div className="min-w-0">
                 <p className="truncate text-[14px] font-light leading-6 text-[#16151c]">
                     {subject}
@@ -78,7 +78,9 @@ function RowItem({ subject, documents, onDelete }) {
 
 export default function ListSubjects() {
     const [sortOrder, setSortOrder] = useState('newest');
-    const [rows, setRows] = useState(TABLE_ROWS);
+    const [rows, setRows] = useState(REVIEW_SUBJECTS);
+    const [isAddSubjectOpen, setIsAddSubjectOpen] = useState(false);
+    const navigate = useNavigate();
 
     const visibleRows = sortOrder === 'newest' ? [...rows].reverse() : rows;
 
@@ -88,6 +90,24 @@ export default function ListSubjects() {
         if (shouldDelete) {
             setRows((currentRows) => currentRows.filter((row) => row.id !== rowId));
         }
+    };
+
+    const handleAddSubject = ({ subjectCode, subjectName, description }) => {
+        setRows((currentRows) => {
+            const nextId = currentRows.length > 0 ? Math.max(...currentRows.map((row) => row.id)) + 1 : 1;
+            const newSubjectName = subjectName || subjectCode || 'Môn học mới';
+
+            return [
+                ...currentRows,
+                createReviewSubject({
+                    id: nextId,
+                    name: newSubjectName,
+                    documents: '0 tài liệu đã tải',
+                    subjectCode: subjectCode || `MTA${String(nextId).padStart(2, '0')}`,
+                    description,
+                }),
+            ];
+        });
     };
 
     return (
@@ -112,6 +132,7 @@ export default function ListSubjects() {
 
                     <button
                         type="button"
+                        onClick={() => setIsAddSubjectOpen(true)}
                         className="flex h-10 cursor-pointer items-center gap-2 rounded-full bg-[#7152f3] px-4 text-[16px] font-normal leading-6 text-white shadow-[4px_8px_24px_0_rgba(77,93,250,0.25)] transition-colors hover:bg-[#5a44d0]"
                     >
                         <span>Thêm</span>
@@ -131,9 +152,10 @@ export default function ListSubjects() {
                     {visibleRows.map((row) => (
                         <RowItem
                             key={row.id}
-                            subject={row.subject}
+                            subject={row.name}
                             documents={row.documents}
-                            onDelete={() => handleDeleteRow(row.id, row.subject)}
+                            onClick={() => navigate(String(row.id), { state: row })}
+                            onDelete={() => handleDeleteRow(row.id, row.name)}
                         />
                     ))}
                 </div>
@@ -142,6 +164,12 @@ export default function ListSubjects() {
             <div className="mt-8 border-t border-[#F3F4F6] pt-6">
                 <Pagination pageSize={10} totalItems={60} currentPage={1} totalPages={4} itemLabel="môn học" />
             </div>
+
+            <AddSubject
+                open={isAddSubjectOpen}
+                onClose={() => setIsAddSubjectOpen(false)}
+                onSubmit={handleAddSubject}
+            />
         </div>
     );
 }

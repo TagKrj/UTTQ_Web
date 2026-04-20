@@ -50,7 +50,7 @@ function PaginationNumberButton({ page, active, onClick }) {
             type="button"
             onClick={onClick}
             aria-current={active ? 'page' : undefined}
-            className={`flex h-[35px] min-w-[35px] items-center justify-center px-3 py-[7px] text-[14px] leading-[22px] transition-colors duration-200 ${active ? 'rounded-lg border border-[#7152f3] bg-white font-semibold text-[#7152f3]' : 'rounded-full bg-white font-light text-[#16151c] hover:text-[#7152f3]'}`}
+            className={`flex h-[35px] min-w-[35px] items-center justify-center px-3 py-[7px] text-[14px] leading-[22px] transition-colors duration-200 ${active ? 'rounded-lg border border-[#7152f3] bg-white font-semibold text-[#7152f3]' : 'rounded-lg bg-white font-light text-[#16151c] hover:text-[#7152f3]'}`}
         >
             {page}
         </button>
@@ -94,7 +94,6 @@ export default function Pagination({
     return (
         <div
             className={`flex w-full flex-col gap-4 lg:flex-row lg:items-center lg:justify-between ${className}`}
-            style={{ fontFamily: "'Lexend', sans-serif" }}
         >
             <div className="flex items-center gap-5">
                 <p className="text-[14px] font-light leading-[22px] text-[#a2a1a8]">
