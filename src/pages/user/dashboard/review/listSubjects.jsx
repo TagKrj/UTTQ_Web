@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Pagination from '../../../../components/pagination';
 import AddSubject from '../../../../components/popup/addSubject';
+import EditSubject from '../../../../components/popup/editSubject';
 import {
     SwitchSvg as SortIcon,
     editSvg as EditIcon,
@@ -26,7 +27,9 @@ function PlusIcon() {
     );
 }
 
-function ActionButton({ icon: Icon, label, onClick }) {
+function ActionButton({ icon, label, onClick }) {
+    const IconComponent = icon;
+
     return (
         <button
             type="button"
@@ -37,12 +40,12 @@ function ActionButton({ icon: Icon, label, onClick }) {
             }}
             className="flex h-7 w-7 cursor-pointer items-center justify-center text-[#16151c] transition-colors duration-200 hover:text-[#7152f3]"
         >
-            <Icon color="currentColor" />
+            <IconComponent color="currentColor" />
         </button>
     );
 }
 
-function RowItem({ subject, documents, onClick, onDelete }) {
+function RowItem({ subject, documents, onClick, onDelete, onEdit }) {
     return (
         <div
             className="grid cursor-pointer grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)_96px] items-center rounded-[10px] border-b border-[#F3F4F6] py-5 transition-colors hover:bg-[#EDEFFF] last:border-b-0"
@@ -69,7 +72,7 @@ function RowItem({ subject, documents, onClick, onDelete }) {
             </div>
 
             <div className="flex items-center justify-end gap-4">
-                <ActionButton icon={EditIcon} label="Chỉnh sửa" />
+                <ActionButton icon={EditIcon} label="Chỉnh sửa" onClick={onEdit} />
                 <ActionButton icon={RemoveIcon} label="Xóa" onClick={onDelete} />
             </div>
         </div>
@@ -80,9 +83,29 @@ export default function ListSubjects() {
     const [sortOrder, setSortOrder] = useState('newest');
     const [rows, setRows] = useState(REVIEW_SUBJECTS);
     const [isAddSubjectOpen, setIsAddSubjectOpen] = useState(false);
+    const [isEditSubjectOpen, setIsEditSubjectOpen] = useState(false);
+    const [subjectBeingEdited, setSubjectBeingEdited] = useState(null);
     const navigate = useNavigate();
 
     const visibleRows = sortOrder === 'newest' ? [...rows].reverse() : rows;
+
+    const openAddSubjectModal = () => {
+        setIsAddSubjectOpen(true);
+    };
+
+    const openEditSubjectModal = (subject) => {
+        setSubjectBeingEdited(subject);
+        setIsEditSubjectOpen(true);
+    };
+
+    const closeAddSubjectModal = () => {
+        setIsAddSubjectOpen(false);
+    };
+
+    const closeEditSubjectModal = () => {
+        setIsEditSubjectOpen(false);
+        setSubjectBeingEdited(null);
+    };
 
     const handleDeleteRow = (rowId, subject) => {
         const shouldDelete = window.confirm(`Bạn có chắc muốn xóa "${subject}" không?`);
@@ -110,6 +133,25 @@ export default function ListSubjects() {
         });
     };
 
+    const handleUpdateSubject = ({ subjectCode, subjectName, description }) => {
+        if (!subjectBeingEdited) {
+            return;
+        }
+
+        setRows((currentRows) => currentRows.map((row) => {
+            if (row.id !== subjectBeingEdited.id) {
+                return row;
+            }
+
+            return {
+                ...row,
+                name: subjectName || subjectCode || row.name,
+                subjectCode: subjectCode || row.subjectCode,
+                description,
+            };
+        }));
+    };
+
     return (
         <div className="flex min-h-0 flex-1 flex-col">
             <div className="mt-2 flex items-center justify-between gap-6">
@@ -132,7 +174,7 @@ export default function ListSubjects() {
 
                     <button
                         type="button"
-                        onClick={() => setIsAddSubjectOpen(true)}
+                        onClick={openAddSubjectModal}
                         className="flex h-10 cursor-pointer items-center gap-2 rounded-full bg-[#7152f3] px-4 text-[16px] font-normal leading-6 text-white shadow-[4px_8px_24px_0_rgba(77,93,250,0.25)] transition-colors hover:bg-[#5a44d0]"
                     >
                         <span>Thêm</span>
@@ -156,6 +198,7 @@ export default function ListSubjects() {
                             documents={row.documents}
                             onClick={() => navigate(String(row.id), { state: row })}
                             onDelete={() => handleDeleteRow(row.id, row.name)}
+                            onEdit={() => openEditSubjectModal(row)}
                         />
                     ))}
                 </div>
@@ -167,8 +210,15 @@ export default function ListSubjects() {
 
             <AddSubject
                 open={isAddSubjectOpen}
-                onClose={() => setIsAddSubjectOpen(false)}
+                onClose={closeAddSubjectModal}
                 onSubmit={handleAddSubject}
+            />
+
+            <EditSubject
+                open={isEditSubjectOpen}
+                onClose={closeEditSubjectModal}
+                onSubmit={handleUpdateSubject}
+                initialValues={subjectBeingEdited ?? undefined}
             />
         </div>
     );

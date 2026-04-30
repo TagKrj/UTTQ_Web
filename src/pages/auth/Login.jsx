@@ -4,19 +4,29 @@ import FacebookIcon from '../../assets/icons/Facebook.svg';
 import GoogleIcon from '../../assets/icons/Google.svg';
 import AppleIcon from '../../assets/icons/Apple.svg';
 import { UserRoundedSvg, ExcludeSvg, HideSvg, EyeSvg } from '../../constants/loginIcons';
+import { useNavigate } from 'react-router-dom';
+import useAuth from '../../hooks/useAuth';
 
 export default function Login() {
     const emailInputRef = useRef(null);
     const passwordInputRef = useRef(null);
+    const navigate = useNavigate();
+    const { login, loading, error } = useAuth();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [rememberMe, setRememberMe] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [focusedField, setFocusedField] = useState('');
 
-    const handleLogin = (e) => {
+    const handleLogin = async (e) => {
         e.preventDefault();
-        console.log('Login with:', email, password, rememberMe);
+
+        try {
+            await login({ email, password }, { rememberMe });
+            navigate('/', { replace: true });
+        } catch {
+            // Error is exposed by the auth hook.
+        }
     };
 
     const isEmailFocused = focusedField === 'email';
@@ -108,10 +118,17 @@ export default function Login() {
 
                 <button
                     type="submit"
+                    disabled={loading}
                     className="w-full bg-[#6A5AE0] text-white font-normal py-4 px-4 rounded-full hover:bg-[#5a4ad0] transition-colors shadow-[4px_8px_24px_0_rgba(77,93,250,0.25)] cursor-pointer"
                 >
-                    Đăng nhập
+                    {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
                 </button>
+
+                {error ? (
+                    <p className="text-center text-sm text-red-500" aria-live="polite">
+                        {error}
+                    </p>
+                ) : null}
 
                 <div className="text-center">
                     <a href="#" className="text-[#6A5AE0] font-normal text-base hover:underline">

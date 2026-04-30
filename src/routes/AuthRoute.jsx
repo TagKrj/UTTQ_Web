@@ -3,8 +3,23 @@ import MainLayout from '../layouts/auth/MainLayout';
 import Login from '../pages/auth/Login';
 import Onboard from '../pages/auth/Onboard';
 import Register from '../pages/auth/Register';
+import { getStoredAuth } from '../services/authService';
 
-const withAuthLayout = (page) => <MainLayout>{page}</MainLayout>;
+export function PublicOnlyRoute({ children }) {
+    const isAuthenticated = Boolean(getStoredAuth()?.accessToken);
+
+    if (isAuthenticated) {
+        return <Navigate to="/" replace />;
+    }
+
+    return children;
+}
+
+const withAuthLayout = (page) => (
+    <PublicOnlyRoute>
+        <MainLayout>{page}</MainLayout>
+    </PublicOnlyRoute>
+);
 
 const authPages = [
     { path: '/login', page: <Login /> },
@@ -17,7 +32,11 @@ export const authRoutes = authPages.map(({ path, page }) => ({
     element: withAuthLayout(page),
 })).concat({
     path: '*',
-    element: <Navigate to="/login" replace />,
+    element: (
+        <PublicOnlyRoute>
+            <Navigate to="/login" replace />
+        </PublicOnlyRoute>
+    ),
 });
 
 export default authRoutes;

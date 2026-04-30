@@ -1,11 +1,15 @@
-import { authRoutes } from './AuthRoute';
+import { authRoutes, PublicOnlyRoute } from './AuthRoute';
 import { userRoutes } from './UserRouter';
 import LandingPage from '../layouts/user/landingPage';
 
 export const landingRoutes = [
     {
         path: '/landing',
-        element: <LandingPage />,
+        element: (
+            <PublicOnlyRoute>
+                <LandingPage />
+            </PublicOnlyRoute>
+        ),
     },
 ];
 
