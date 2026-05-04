@@ -24,15 +24,15 @@ function clearAuthFromStorage(storage) {
 	storage.removeItem(AUTH_STORAGE_KEY);
 }
 
-function resolveAuthPayload(payload) {
+function resolveApiPayload(payload) {
 	return payload?.data ?? payload;
 }
 
 function normalizeAuthPayload(payload) {
-	const authPayload = resolveAuthPayload(payload);
+	const authPayload = resolveApiPayload(payload);
 
 	if (!authPayload?.accessToken || !authPayload?.refreshToken || !authPayload?.user) {
-		throw new Error('Login response is invalid.');
+		throw new Error('Phản hồi xác thực không hợp lệ.');
 	}
 
 	return {
@@ -83,20 +83,68 @@ export async function login(credentials, { rememberMe = false } = {}) {
 	const payload = await response.json().catch(() => null);
 
 	if (!response.ok) {
-		throw new Error(payload?.message || payload?.error || 'Login failed.');
+		clearStoredAuth();
+		throw new Error(payload?.message || payload?.error || 'Đăng nhập thất bại.');
 	}
 
-	const auth = normalizeAuthPayload(payload);
+	try {
+		const auth = normalizeAuthPayload(payload);
+		saveStoredAuth(auth, rememberMe);
+		return auth;
+	} catch (error) {
+		clearStoredAuth();
+		throw error;
+	}
+}
 
-	saveStoredAuth(auth, rememberMe);
+export async function register(payload) {
+	const response = await fetch(API_ENDPOINTS.AUTH.REGISTER, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Accept: 'application/json',
+		},
+		body: JSON.stringify(payload),
+	});
 
-	return auth;
+	const responsePayload = await response.json().catch(() => null);
+
+	if (!response.ok) {
+		throw new Error(responsePayload?.message || responsePayload?.error || 'Đăng ký thất bại.');
+	}
+
+	return resolveApiPayload(responsePayload) ?? {
+		message: 'Đăng ký thành công',
+	};
 }
 
 export async function logout() {
+	const storedAuth = getStoredAuth();
+	const accessToken = storedAuth?.accessToken;
+
 	clearStoredAuth();
 
-	return {
+	if (!accessToken) {
+		return {
+			message: 'Đăng xuất thành công',
+		};
+	}
+
+	const response = await fetch(API_ENDPOINTS.AUTH.LOGOUT, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			Authorization: `Bearer ${accessToken}`,
+		},
+	});
+
+	const payload = await response.json().catch(() => null);
+
+	if (!response.ok) {
+		throw new Error(payload?.message || payload?.error || 'Đăng xuất thất bại.');
+	}
+
+	return resolveApiPayload(payload) ?? {
 		message: 'Đăng xuất thành công',
 	};
 }

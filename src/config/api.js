@@ -11,6 +11,11 @@ export const API_ENDPOINTS = {
     PROFILE: `${API_BASE_URL}/api/auth/me`,
   },
 
+  // ==================== DOCUMENTS ====================
+  DOCUMENTS: {
+    UPLOAD: `${API_BASE_URL}/api/documents/upload`,
+  },
+
   
 };
 

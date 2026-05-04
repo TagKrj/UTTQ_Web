@@ -1,7 +1,8 @@
 import React, { useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import ArrowLeftIcon from '../../assets/icons/Arrow-Left.svg';
-import { ChevronDownSvg, EmailSvg, ExcludeSvg as LockSvg, EyeSvg, HideSvg, UserRoundedSvg, VietnamFlagSvg } from '../../constants/loginIcons';
+import { EmailSvg, ExcludeSvg as LockSvg, EyeSvg, HideSvg, UserRoundedSvg } from '../../constants/loginIcons';
+import useAuth from '../../hooks/useAuth';
 
 function RegisterField({
     fieldKey,
@@ -55,46 +56,65 @@ function RegisterField({
 export default function Register() {
     const location = useLocation();
     const navigate = useNavigate();
+    const { register, loading, error } = useAuth();
     const onboardSelections = location.state?.selectedByStep ?? null;
-    const usernameInputRef = useRef(null);
+    const fullNameInputRef = useRef(null);
     const passwordInputRef = useRef(null);
     const confirmPasswordInputRef = useRef(null);
-    const phoneInputRef = useRef(null);
     const emailInputRef = useRef(null);
     const [formData, setFormData] = useState({
-        username: '',
+        fullName: '',
         password: '',
         confirmPassword: '',
-        phone: '',
         email: '',
     });
+    const [formError, setFormError] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [focusedField, setFocusedField] = useState('');
 
-    const isUsernameFocused = focusedField === 'username';
+    const isFullNameFocused = focusedField === 'fullName';
     const isPasswordFocused = focusedField === 'password';
     const isConfirmPasswordFocused = focusedField === 'confirmPassword';
-    const isPhoneFocused = focusedField === 'phone';
     const isEmailFocused = focusedField === 'email';
 
-    const hasUsernameText = formData.username.trim() !== '';
+    const hasFullNameText = formData.fullName.trim() !== '';
     const hasPasswordText = formData.password.trim() !== '';
     const hasConfirmPasswordText = formData.confirmPassword.trim() !== '';
-    const hasPhoneText = formData.phone.trim() !== '';
     const hasEmailText = formData.email.trim() !== '';
 
-    const usernameIconColor = hasUsernameText ? '#212121' : isUsernameFocused ? '#6A5AE0' : '#9E9E9E';
+    const fullNameIconColor = hasFullNameText ? '#212121' : isFullNameFocused ? '#6A5AE0' : '#9E9E9E';
     const passwordIconColor = hasPasswordText ? '#212121' : isPasswordFocused ? '#6A5AE0' : '#9E9E9E';
     const confirmPasswordIconColor = hasConfirmPasswordText ? '#212121' : isConfirmPasswordFocused ? '#6A5AE0' : '#9E9E9E';
-    const phoneIconColor = hasPhoneText ? '#212121' : isPhoneFocused ? '#6A5AE0' : '#9E9E9E';
     const emailIconColor = hasEmailText ? '#212121' : isEmailFocused ? '#6A5AE0' : '#9E9E9E';
 
-    const handleSubmit = (event) => {
+    const handleSubmit = async (event) => {
         event.preventDefault();
-        console.log('Register with:', formData);
-        window.alert('Đăng ký thành công');
-        // navigate('/login');
+        setFormError('');
+
+        const fullName = formData.fullName.trim();
+        const email = formData.email.trim();
+
+        if (!fullName || !email || !formData.password || !formData.confirmPassword) {
+            setFormError('Vui lòng nhập đầy đủ thông tin.');
+            return;
+        }
+
+        if (formData.password !== formData.confirmPassword) {
+            setFormError('Mật khẩu xác nhận không khớp.');
+            return;
+        }
+
+        try {
+            await register({
+                email,
+                password: formData.password,
+                fullName,
+            });
+            navigate('/login', { replace: true });
+        } catch {
+            // Error is exposed by the auth hook.
+        }
     };
 
     const updateField = (field, transform = (value) => value) => (event) => {
@@ -134,15 +154,15 @@ export default function Register() {
                 <form onSubmit={handleSubmit} className="flex flex-col gap-12">
                     <div className="flex flex-col gap-2.5">
                         <RegisterField
-                            fieldKey="username"
-                            inputRef={usernameInputRef}
+                            fieldKey="fullName"
+                            inputRef={fullNameInputRef}
                             focusedField={focusedField}
                             setFocusedField={setFocusedField}
-                            value={formData.username}
-                            onChange={updateField('username')}
-                            placeholder="Tên đăng nhập"
-                            autoComplete="username"
-                            renderLeftSlot={() => <UserRoundedSvg color={usernameIconColor} />}
+                            value={formData.fullName}
+                            onChange={updateField('fullName')}
+                            placeholder="Họ và tên"
+                            autoComplete="name"
+                            renderLeftSlot={() => <UserRoundedSvg color={fullNameIconColor} />}
                         />
 
                         <RegisterField
@@ -192,27 +212,6 @@ export default function Register() {
                         />
 
                         <RegisterField
-                            fieldKey="phone"
-                            inputRef={phoneInputRef}
-                            focusedField={focusedField}
-                            setFocusedField={setFocusedField}
-                            value={formData.phone}
-                            onChange={updateField('phone', (value) => value.replace(/\D/g, '').slice(0, 10))}
-                            heightClass="h-[56px]"
-                            placeholder="Số điện thoại"
-                            type="tel"
-                            autoComplete="tel"
-                            inputMode="numeric"
-                            maxLength={10}
-                            renderLeftSlot={() => (
-                                <div className="flex items-center gap-2 shrink-0">
-                                    <VietnamFlagSvg />
-                                    <ChevronDownSvg color={phoneIconColor} />
-                                </div>
-                            )}
-                        />
-
-                        <RegisterField
                             fieldKey="email"
                             inputRef={emailInputRef}
                             focusedField={focusedField}
@@ -228,10 +227,17 @@ export default function Register() {
 
                     <button
                         type="submit"
-                        className="h-[58px] rounded-[100px] bg-[#6A5AE0] px-4 text-[16px] font-normal text-white shadow-[4px_8px_24px_0_rgba(77,93,250,0.25)] transition-colors hover:bg-[#5a4ad0] cursor-pointer"
+                        disabled={loading}
+                        className="h-[58px] rounded-[100px] bg-[#6A5AE0] px-4 text-[16px] font-normal text-white shadow-[4px_8px_24px_0_rgba(77,93,250,0.25)] transition-colors hover:bg-[#5a4ad0] cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                        Đăng ký
+                        {loading ? 'Đang đăng ký...' : 'Đăng ký'}
                     </button>
+
+                    {formError || error ? (
+                        <p className="text-center text-sm text-red-500" aria-live="polite">
+                            {formError || error}
+                        </p>
+                    ) : null}
                 </form>
             </div>
         </div>

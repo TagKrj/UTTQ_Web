@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { Navigate } from 'react-router-dom';
 import MainLayout from '../layouts/user/MainLayout';
 import Statistical from '../pages/user/dashboard/statisticalLayout';

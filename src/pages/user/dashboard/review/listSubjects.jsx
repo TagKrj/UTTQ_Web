@@ -5,10 +5,11 @@ import AddSubject from '../../../../components/popup/addSubject';
 import EditSubject from '../../../../components/popup/editSubject';
 import {
     SwitchSvg as SortIcon,
-    editSvg as EditIcon,
-    removeSvg as RemoveIcon,
+    EditSvg as EditIcon,
+    RemoveSvg as RemoveIcon,
 } from '../../../../constants/dashboardIcon';
-import { REVIEW_SUBJECTS, createReviewSubject } from '../../../../utils/reviewSubjects';
+import { REVIEW_SUBJECTS } from '../../../../utils/reviewSubjects';
+import { uploadDocument } from '../../../../services/documentsService';
 
 function PlusIcon() {
     return (
@@ -85,11 +86,21 @@ export default function ListSubjects() {
     const [isAddSubjectOpen, setIsAddSubjectOpen] = useState(false);
     const [isEditSubjectOpen, setIsEditSubjectOpen] = useState(false);
     const [subjectBeingEdited, setSubjectBeingEdited] = useState(null);
+    const [uploadStatus, setUploadStatus] = useState({
+        loading: false,
+        error: '',
+        success: '',
+    });
     const navigate = useNavigate();
 
     const visibleRows = sortOrder === 'newest' ? [...rows].reverse() : rows;
 
     const openAddSubjectModal = () => {
+        setUploadStatus({
+            loading: false,
+            error: '',
+            success: '',
+        });
         setIsAddSubjectOpen(true);
     };
 
@@ -100,6 +111,11 @@ export default function ListSubjects() {
 
     const closeAddSubjectModal = () => {
         setIsAddSubjectOpen(false);
+        setUploadStatus({
+            loading: false,
+            error: '',
+            success: '',
+        });
     };
 
     const closeEditSubjectModal = () => {
@@ -115,22 +131,30 @@ export default function ListSubjects() {
         }
     };
 
-    const handleAddSubject = ({ subjectCode, subjectName, description }) => {
-        setRows((currentRows) => {
-            const nextId = currentRows.length > 0 ? Math.max(...currentRows.map((row) => row.id)) + 1 : 1;
-            const newSubjectName = subjectName || subjectCode || 'Môn học mới';
-
-            return [
-                ...currentRows,
-                createReviewSubject({
-                    id: nextId,
-                    name: newSubjectName,
-                    documents: '0 tài liệu đã tải',
-                    subjectCode: subjectCode || `MTA${String(nextId).padStart(2, '0')}`,
-                    description,
-                }),
-            ];
+    const handleUploadDocument = async ({ title, file }) => {
+        setUploadStatus({
+            loading: true,
+            error: '',
+            success: '',
         });
+
+        try {
+            const result = await uploadDocument({ title, file });
+            setUploadStatus({
+                loading: false,
+                error: '',
+                success: result?.message || 'Tải lên thành công.',
+            });
+            return result;
+        } catch (uploadError) {
+            const message = uploadError instanceof Error ? uploadError.message : 'Tải tài liệu thất bại.';
+            setUploadStatus({
+                loading: false,
+                error: message,
+                success: '',
+            });
+            throw uploadError;
+        }
     };
 
     const handleUpdateSubject = ({ subjectCode, subjectName, description }) => {
@@ -211,7 +235,10 @@ export default function ListSubjects() {
             <AddSubject
                 open={isAddSubjectOpen}
                 onClose={closeAddSubjectModal}
-                onSubmit={handleAddSubject}
+                onSubmit={handleUploadDocument}
+                loading={uploadStatus.loading}
+                error={uploadStatus.error}
+                successMessage={uploadStatus.success}
             />
 
             <EditSubject

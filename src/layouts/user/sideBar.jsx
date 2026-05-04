@@ -21,6 +21,8 @@ const MENU_PATH_MAP = {
 const ACTIVE_THEME_LABEL = 'Sáng';
 
 function SidebarItem({ icon: Icon, label, active, onClick }) {
+    const iconNode = Icon({ color: active ? '#6949FF' : '#212121' });
+
     return (
         <button
             type="button"
@@ -32,7 +34,7 @@ function SidebarItem({ icon: Icon, label, active, onClick }) {
                 className={`absolute left-0 top-0 h-full w-[3px] rounded-r-[10px] bg-[#7152f3] transition-opacity duration-200 ${active ? 'opacity-100' : 'opacity-0'}`}
             />
             <span className="relative z-10 ml-[19px] flex h-6 w-6 shrink-0 items-center justify-center transition-colors duration-200">
-                <Icon color={active ? '#6949FF' : '#212121'} />
+                {iconNode}
             </span>
             <span
                 className={`relative z-10 ml-4 text-[16px] leading-6 transition-colors duration-200 ${active ? 'font-semibold text-[#6949FF]' : 'font-normal text-[#212121]'}`}
@@ -44,6 +46,8 @@ function SidebarItem({ icon: Icon, label, active, onClick }) {
 }
 
 function ThemeToggleItem({ icon: Icon, label, active, onClick }) {
+    const iconNode = Icon({ color: active ? '#FFFFFF' : '#16151C' });
+
     return (
         <button
             type="button"
@@ -51,7 +55,7 @@ function ThemeToggleItem({ icon: Icon, label, active, onClick }) {
             aria-pressed={active}
             className={`relative z-10 flex h-full w-[110px] items-center gap-2.5 px-[18px] text-left transition-colors duration-200 ${active ? 'cursor-default' : 'cursor-pointer'}`}
         >
-            <Icon color={active ? '#FFFFFF' : '#16151C'} />
+            {iconNode}
             <span className={`text-[16px] leading-6 transition-colors duration-200 ${active ? 'font-normal text-white' : 'font-normal text-[#16151C]'}`}>
                 {label}
             </span>

@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { getStoredAuth, login as loginRequest, logout as logoutRequest } from '../services/authService';
+import { getStoredAuth, login as loginRequest, logout as logoutRequest, register as registerRequest } from '../services/authService';
 
 export default function useAuth() {
 	const [auth, setAuth] = useState(() => getStoredAuth());
@@ -16,8 +16,23 @@ export default function useAuth() {
 
 			return nextAuth;
 		} catch (loginError) {
-			setError(loginError instanceof Error ? loginError.message : 'Login failed.');
+			setError(loginError instanceof Error ? loginError.message : 'Đăng nhập thất bại.');
 			throw loginError;
+		} finally {
+			setLoading(false);
+		}
+	}, []);
+
+	const register = useCallback(async (payload) => {
+		setLoading(true);
+		setError('');
+
+		try {
+			const result = await registerRequest(payload);
+			return result;
+		} catch (registerError) {
+			setError(registerError instanceof Error ? registerError.message : 'Đăng ký thất bại.');
+			throw registerError;
 		} finally {
 			setLoading(false);
 		}
@@ -33,7 +48,7 @@ export default function useAuth() {
 
 			return result;
 		} catch (logoutError) {
-			setError(logoutError instanceof Error ? logoutError.message : 'Logout failed.');
+			setError(logoutError instanceof Error ? logoutError.message : 'Đăng xuất thất bại.');
 			throw logoutError;
 		} finally {
 			setLoading(false);
@@ -50,5 +65,6 @@ export default function useAuth() {
 		error,
 		login,
 		logout,
+		register,
 	};
 }
