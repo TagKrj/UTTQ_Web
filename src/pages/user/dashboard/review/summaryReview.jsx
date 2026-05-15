@@ -2,11 +2,24 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import BackArrowIcon from '../../../../assets/icons/Arrow-Left.svg';
 import ClockIcon from '../../../../assets/icons/Clock Circle.svg';
-import { SUMMARY_REVIEW_SECTIONS } from '../../../../constants/summaryReviewContent';
 import {
     createReviewSubject,
     getReviewSubjectById,
 } from '../../../../utils/reviewSubjects';
+import {
+    getOrCreateSummaryByDocument,
+    normalizeSummary,
+} from '../../../../services/summariesService';
+import { useSubjects } from '../../../../contexts/SubjectsContext';
+import { recordReviewActivity } from '../../../../services/reviewActivityService';
+
+function getExerciseDocumentId(exercise) {
+    return exercise?.documentId
+        ?? exercise?.document?.id
+        ?? exercise?.document?._id
+        ?? exercise?.document?.documentId
+        ?? exercise?.sourceDocumentId;
+}
 
 function formatElapsedTime(totalSeconds) {
     const safeSeconds = Math.max(0, Math.floor(totalSeconds));
@@ -22,8 +35,13 @@ export default function SummaryReview() {
     const navigate = useNavigate();
     const contentRef = useRef(null);
     const startTimeRef = useRef(Date.now());
+    const hasRecordedActivityRef = useRef(false);
+    const { updateExercise } = useSubjects();
     const [elapsedSeconds, setElapsedSeconds] = useState(0);
     const [scrollProgress, setScrollProgress] = useState(0);
+    const [summary, setSummary] = useState(null);
+    const [isLoadingSummary, setIsLoadingSummary] = useState(true);
+    const [summaryError, setSummaryError] = useState('');
 
     const { subject, exercise } = useMemo(() => {
         const stateSubject = location.state?.subject;
@@ -45,6 +63,10 @@ export default function SummaryReview() {
         };
     }, [exerciseId, location.state?.exercise, location.state?.subject, subjectId]);
 
+    const documentId = getExerciseDocumentId(exercise);
+    const subjectTitle = subject.title ?? subject.name ?? 'Môn học';
+    const exerciseTitle = exercise?.title ?? 'Bài ôn tập';
+
     useEffect(() => {
         const timerId = window.setInterval(() => {
             setElapsedSeconds(Math.floor((Date.now() - startTimeRef.current) / 1000));
@@ -52,6 +74,94 @@ export default function SummaryReview() {
 
         return () => window.clearInterval(timerId);
     }, []);
+
+    useEffect(() => {
+        let isMounted = true;
+        hasRecordedActivityRef.current = false;
+        startTimeRef.current = Date.now();
+
+        async function loadSummary() {
+            if (!documentId) {
+                setIsLoadingSummary(false);
+                setSummaryError('Bài tập này chưa có mã tài liệu từ backend. Vui lòng tải lại file PDF để sinh tóm tắt.');
+                return;
+            }
+
+            setIsLoadingSummary(true);
+            setSummaryError('');
+
+            try {
+                const payload = await getOrCreateSummaryByDocument(documentId);
+                const normalizedSummary = normalizeSummary(payload);
+
+                if (!isMounted) return;
+
+                if (!normalizedSummary.overview && normalizedSummary.sections.length === 0 && normalizedSummary.keyPoints.length === 0) {
+                    throw new Error('Bản tóm tắt chưa có nội dung.');
+                }
+
+                setSummary(normalizedSummary);
+            } catch (error) {
+                if (!isMounted) return;
+                setSummary(null);
+                setSummaryError(error?.message || 'Không thể tải tóm tắt.');
+            } finally {
+                if (isMounted) {
+                    setIsLoadingSummary(false);
+                }
+            }
+        }
+
+        loadSummary();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [documentId]);
+
+    useEffect(() => {
+        if (
+            hasRecordedActivityRef.current
+            || isLoadingSummary
+            || summaryError
+            || !summary
+            || scrollProgress < 95
+        ) {
+            return;
+        }
+
+        const durationSeconds = Math.max(1, Math.floor((Date.now() - startTimeRef.current) / 1000));
+        hasRecordedActivityRef.current = true;
+
+        recordReviewActivity({
+            type: 'summary',
+            subjectId,
+            subjectTitle,
+            subjectCode: subject.subjectCode,
+            exerciseId,
+            exerciseTitle,
+            documentId,
+            startedAt: new Date(startTimeRef.current).toISOString(),
+            durationSeconds,
+            progress: 100,
+        });
+        updateExercise(subjectId, exerciseId, {
+            progress: 100,
+            latestAttemptedAt: 'Hôm nay',
+        });
+    }, [
+        documentId,
+        exerciseId,
+        exerciseTitle,
+        isLoadingSummary,
+        scrollProgress,
+        subject.subjectCode,
+        subjectId,
+        subjectTitle,
+        summary,
+        summaryError,
+        updateExercise,
+    ]);
 
     useEffect(() => {
         const contentElement = contentRef.current;
@@ -80,19 +190,14 @@ export default function SummaryReview() {
             contentElement.removeEventListener('scroll', updateScrollProgress);
             window.removeEventListener('resize', updateScrollProgress);
         };
-    }, []);
+    }, [isLoadingSummary, summary, summaryError]);
 
     return (
         <div className="flex min-h-0 flex-1 flex-col pb-2">
             <div className="mt-4 flex min-w-0 items-center gap-3">
                 <button
                     type="button"
-                    onClick={() => navigate(`/review/${subject.id}/choose-method/${exercise.id}`, {
-                        state: {
-                            subject,
-                            exercise,
-                        },
-                    })}
+                    onClick={() => navigate(-1)}
                     className="flex h-7 w-7 shrink-0 items-center justify-center text-[#212121] transition-opacity hover:opacity-75 cursor-pointer"
                     aria-label="Quay lại màn chọn phương pháp"
                 >
@@ -100,9 +205,9 @@ export default function SummaryReview() {
                 </button>
 
                 <div className="flex min-w-0 items-center gap-3 text-[18px] font-semibold leading-[1.2] text-[#212121]">
-                    <span className="truncate">{subject.name}</span>
+                    <span className="truncate">{subjectTitle}</span>
                     <span className="shrink-0 text-[#6A5AE0]">•</span>
-                    <span className="truncate font-semibold">{exercise.title}</span>
+                    <span className="truncate font-semibold">{exerciseTitle}</span>
                 </div>
             </div>
 
@@ -137,9 +242,63 @@ export default function SummaryReview() {
                     ref={contentRef}
                     className="thin-scrollbar mt-4 min-h-0 flex-1 overflow-y-auto px-6 pb-6 pr-8"
                 >
-                    <div className="rounded-2xl px-4 py-4 text-[14px] leading-7 text-[#16151c] shadow-[0_1px_2px_rgba(17,24,39,0.02)]">
-                        <p className="whitespace-pre-line">{SUMMARY_REVIEW_SECTIONS}</p>
-                    </div>
+                    {isLoadingSummary ? (
+                        <div className="rounded-2xl bg-white/60 px-5 py-5 text-[14px] leading-7 text-[#858494] shadow-[0_1px_2px_rgba(17,24,39,0.02)]">
+                            Đang tải hoặc sinh tóm tắt...
+                        </div>
+                    ) : summaryError ? (
+                        <div className="rounded-2xl bg-[#fef2f2] px-5 py-5 text-[14px] leading-7 text-[#b42318] shadow-[0_1px_2px_rgba(17,24,39,0.02)]">
+                            {summaryError}
+                        </div>
+                    ) : (
+                        <article className="rounded-2xl bg-white/60 px-5 py-5 text-[14px] leading-7 text-[#16151c] shadow-[0_1px_2px_rgba(17,24,39,0.02)]">
+                            <h2 className="text-[20px] font-semibold leading-[1.35] text-[#212121]">
+                                {summary.title}
+                            </h2>
+
+                            {summary.overview ? (
+                                <section className="mt-4">
+                                    <h3 className="text-[15px] font-semibold text-[#6A5AE0]">Tổng quan</h3>
+                                    <p className="mt-2 whitespace-pre-line text-[#3d3a4f]">{summary.overview}</p>
+                                </section>
+                            ) : null}
+
+                            {summary.keyPoints.length > 0 ? (
+                                <section className="mt-5">
+                                    <h3 className="text-[15px] font-semibold text-[#6A5AE0]">Ý chính</h3>
+                                    <ul className="mt-2 list-disc space-y-2 pl-5 text-[#3d3a4f]">
+                                        {summary.keyPoints.map((point, index) => (
+                                            <li key={`${point}-${index}`}>{point}</li>
+                                        ))}
+                                    </ul>
+                                </section>
+                            ) : null}
+
+                            {summary.sections.length > 0 ? (
+                                <section className="mt-5 space-y-4">
+                                    {summary.sections.map((section, index) => (
+                                        <div key={`${section.heading}-${index}`}>
+                                            <h3 className="text-[15px] font-semibold text-[#6A5AE0]">
+                                                {section.heading}
+                                            </h3>
+                                            <p className="mt-2 whitespace-pre-line text-[#3d3a4f]">{section.content}</p>
+                                        </div>
+                                    ))}
+                                </section>
+                            ) : null}
+
+                            {summary.suggestedQuestions.length > 0 ? (
+                                <section className="mt-5">
+                                    <h3 className="text-[15px] font-semibold text-[#6A5AE0]">Câu hỏi tự ôn</h3>
+                                    <ul className="mt-2 list-decimal space-y-2 pl-5 text-[#3d3a4f]">
+                                        {summary.suggestedQuestions.map((question, index) => (
+                                            <li key={`${question}-${index}`}>{question}</li>
+                                        ))}
+                                    </ul>
+                                </section>
+                            ) : null}
+                        </article>
+                    )}
                 </div>
             </div>
         </div>

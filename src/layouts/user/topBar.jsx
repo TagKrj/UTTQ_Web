@@ -1,7 +1,20 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import NotificationIcon from '../../assets/icons/notification.svg';
 import AvatarIcon from '../../assets/imgs/Avatars.svg';
+import AvatarDropdown from '../../components/AvatarDropdown';
 import { USER_PROFILE } from '../../constants/userProfile';
+import useAuth from '../../hooks/useAuth';
+import useAvatar from '../../hooks/useAvatar';
+import {
+    checkDueReminder,
+    getNotifications,
+    getUnreadNotificationCount,
+    markAllNotificationsRead,
+    markNotificationRead,
+    subscribeNotifications,
+} from '../../services/notificationService';
+import { searchReviewContent } from '../../services/searchService';
 
 function SearchIcon({ color }) {
     return (
@@ -16,9 +29,16 @@ function getGreetingPeriod(hour) {
 }
 
 export default function TopBar() {
+    const navigate = useNavigate();
+    const { user } = useAuth();
+    const searchRef = useRef(null);
+    const notificationRef = useRef(null);
+    const { avatarSrc } = useAvatar(user, AvatarIcon);
     const [greetingPeriod, setGreetingPeriod] = useState(() => getGreetingPeriod(new Date().getHours()));
     const [searchQuery, setSearchQuery] = useState('');
     const [isSearchFocused, setIsSearchFocused] = useState(false);
+    const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+    const [notificationRefreshToken, setNotificationRefreshToken] = useState(0);
 
     useEffect(() => {
         const updateGreetingPeriod = () => {
@@ -31,15 +51,67 @@ export default function TopBar() {
         return () => window.clearInterval(intervalId);
     }, []);
 
+    useEffect(() => {
+        const runReminderCheck = () => checkDueReminder();
+
+        runReminderCheck();
+        const intervalId = window.setInterval(runReminderCheck, 60_000);
+        return () => window.clearInterval(intervalId);
+    }, []);
+
+    useEffect(() => subscribeNotifications(() => {
+        setNotificationRefreshToken((currentToken) => currentToken + 1);
+    }), []);
+
+    useEffect(() => {
+        const handlePointerDown = (event) => {
+            if (!searchRef.current?.contains(event.target)) {
+                setIsSearchFocused(false);
+            }
+
+            if (!notificationRef.current?.contains(event.target)) {
+                setIsNotificationOpen(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handlePointerDown);
+        document.addEventListener('touchstart', handlePointerDown);
+        return () => {
+            document.removeEventListener('mousedown', handlePointerDown);
+            document.removeEventListener('touchstart', handlePointerDown);
+        };
+    }, []);
+
     const hasSearchText = searchQuery.trim() !== '';
     const searchIconColor = hasSearchText ? '#212121' : isSearchFocused ? '#6A5AE0' : '#16151C';
     const searchInputClassName = hasSearchText ? 'text-[#212121] font-normal' : 'text-[#99A1AF] font-light';
+
+    const displayName = user?.fullName ?? USER_PROFILE.displayName;
+    const searchResults = useMemo(() => searchReviewContent(searchQuery), [searchQuery]);
+    const notifications = useMemo(() => getNotifications().slice(0, 8), [notificationRefreshToken]);
+    const unreadCount = useMemo(() => getUnreadNotificationCount(), [notificationRefreshToken]);
+
+    const handleSearchResultClick = (result) => {
+        setSearchQuery('');
+        setIsSearchFocused(false);
+        navigate(result.path, result.state ? { state: result.state } : undefined);
+    };
+
+    const handleNotificationClick = (notification) => {
+        markNotificationRead(notification.id);
+        const firstTarget = notification.targets?.[0];
+        setIsNotificationOpen(false);
+
+        if (firstTarget?.subjectId && firstTarget?.exerciseId) {
+            navigate(`/review/${firstTarget.subjectId}/choose-method/${firstTarget.exerciseId}`);
+        }
+    };
 
     return (
         <div className="flex w-full flex-col gap-4 lg:flex-row lg:items-center lg:justify-between py-3">
             <div className="min-w-0">
                 <p className="text-[20px] font-semibold leading-[1.2] text-[#212121]">
-                    Xin chào {USER_PROFILE.displayName} 👋🏻
+                    Xin chào {displayName} 👋🏻
                 </p>
                 <p className="mt-1 text-[13px] font-normal leading-5 text-[#99A1AF]">
                     Xin chào buổi {greetingPeriod}
@@ -47,37 +119,103 @@ export default function TopBar() {
             </div>
 
             <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center lg:w-auto lg:justify-end">
-                <label
-                    className={`flex h-[46px] w-full min-w-0 items-center gap-3 rounded-[10px] border-[1.5px] px-4 transition-colors duration-200 sm:max-w-[261px] lg:w-[261px] ${isSearchFocused ? 'border-[#6A5AE0] bg-[rgba(106,90,224,0.08)]' : 'border-[rgba(162,161,168,0.1)] bg-white'}`}
-                >
-                    <SearchIcon color={searchIconColor} />
-                    <input
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        type="search"
-                        placeholder="Tìm kiếm"
-                        aria-label="Tìm kiếm"
-                        onFocus={() => setIsSearchFocused(true)}
-                        onBlur={() => setIsSearchFocused(false)}
-                        className={`h-full w-full min-w-0 bg-transparent text-[15px] leading-6 outline-none placeholder:text-[#99A1AF] ${searchInputClassName}`}
-                    />
-                </label>
+                <div ref={searchRef} className="relative w-full sm:max-w-[261px] lg:w-[261px]">
+                    <label
+                        className={`flex h-[46px] w-full min-w-0 items-center gap-3 rounded-[10px] border-[1.5px] px-4 transition-colors duration-200 ${isSearchFocused ? 'border-[#6A5AE0] bg-[rgba(106,90,224,0.08)]' : 'border-[rgba(162,161,168,0.1)] bg-white'}`}
+                    >
+                        <SearchIcon color={searchIconColor} />
+                        <input
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            type="search"
+                            placeholder="Tìm kiếm"
+                            aria-label="Tìm kiếm"
+                            onFocus={() => setIsSearchFocused(true)}
+                            className={`h-full w-full min-w-0 bg-transparent text-[15px] leading-6 outline-none placeholder:text-[#99A1AF] ${searchInputClassName}`}
+                        />
+                    </label>
+                    {isSearchFocused && hasSearchText ? (
+                        <div className="absolute right-0 top-[calc(100%+12px)] z-[80] w-[360px] max-w-[calc(100vw-40px)] overflow-hidden rounded-2xl border border-[#efeefc] bg-white shadow-[0_20px_60px_rgba(17,12,46,0.16)]">
+                            {searchResults.length === 0 ? (
+                                <div className="px-4 py-5 text-[14px] text-[#858494]">
+                                    Không tìm thấy kết quả phù hợp.
+                                </div>
+                            ) : searchResults.map((result) => (
+                                <button
+                                    key={result.id}
+                                    type="button"
+                                    onMouseDown={(event) => event.preventDefault()}
+                                    onClick={() => handleSearchResultClick(result)}
+                                    className="block w-full border-b border-[#F3F4F6] px-4 py-3 text-left last:border-b-0 hover:bg-[#f8f6ff]"
+                                >
+                                    <span className="block text-[12px] font-semibold text-[#7152f3]">{result.type}</span>
+                                    <span className="mt-1 block truncate text-[14px] font-semibold text-[#212121]">{result.title}</span>
+                                    <span className="mt-0.5 block truncate text-[12px] text-[#858494]">{result.description}</span>
+                                </button>
+                            ))}
+                        </div>
+                    ) : null}
+                </div>
 
-                <button
-                    type="button"
-                    aria-label="Thông báo"
-                    className="flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-[14px] bg-[rgba(162,161,168,0.1)] hover:bg-[rgba(162,161,168,0.2)] cursor-pointer"
-                >
-                    <img src={NotificationIcon} alt="Thông báo" />
-                </button>
+                <div ref={notificationRef} className="relative">
+                    <button
+                        type="button"
+                        aria-label="Thông báo"
+                        aria-expanded={isNotificationOpen}
+                        onClick={() => {
+                            setIsNotificationOpen((currentState) => !currentState);
+                            if (!isNotificationOpen) markAllNotificationsRead();
+                        }}
+                        className="relative flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-[14px] bg-[rgba(162,161,168,0.1)] hover:bg-[rgba(162,161,168,0.2)] cursor-pointer"
+                    >
+                        <img src={NotificationIcon} alt="Thông báo" />
+                        {unreadCount > 0 ? (
+                            <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#ef4444] px-1 text-[11px] font-semibold text-white">
+                                {Math.min(9, unreadCount)}
+                            </span>
+                        ) : null}
+                    </button>
 
-                <button
-                    type="button"
-                    aria-label="Tài khoản"
-                    className="flex h-[46px] w-[46px] shrink-0 items-center justify-center overflow-hidden rounded-full shadow-[0px_1px_3px_rgba(0,0,0,0.06)] cursor-pointer"
-                >
-                    <img src={AvatarIcon} alt="Tài khoản" className="h-full w-full object-cover" />
-                </button>
+                    {isNotificationOpen ? (
+                        <div className="absolute right-0 top-[calc(100%+12px)] z-[80] w-[380px] overflow-hidden rounded-2xl border border-[#efeefc] bg-white shadow-[0_20px_60px_rgba(17,12,46,0.16)]">
+                            <div className="flex items-center justify-between border-b border-[#F3F4F6] px-4 py-3">
+                                <div>
+                                    <p className="text-[15px] font-semibold text-[#212121]">Thông báo</p>
+                                    <p className="mt-0.5 text-[12px] text-[#858494]">Nhắc bạn hoàn thiện bài đang dở.</p>
+                                </div>
+                            </div>
+
+                            <div className="max-h-[380px] overflow-y-auto thin-scrollbar">
+                                {notifications.length === 0 ? (
+                                    <div className="px-4 py-6 text-center text-[14px] text-[#858494]">
+                                        Chưa có thông báo nào.
+                                    </div>
+                                ) : notifications.map((notification) => (
+                                    <button
+                                        key={notification.id}
+                                        type="button"
+                                        onClick={() => handleNotificationClick(notification)}
+                                        className="block w-full border-b border-[#F3F4F6] px-4 py-4 text-left last:border-b-0 hover:bg-[#f8f6ff]"
+                                    >
+                                        <span className="block text-[14px] font-semibold text-[#212121]">{notification.title}</span>
+                                        <span className="mt-1 block text-[13px] leading-5 text-[#858494]">{notification.message}</span>
+                                        {notification.targets?.length > 0 ? (
+                                            <span className="mt-2 block text-[12px] font-medium text-[#7152f3]">
+                                                {notification.targets[0].exerciseTitle} · {notification.targets[0].progress}%
+                                            </span>
+                                        ) : null}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    ) : null}
+                </div>
+
+                <AvatarDropdown
+                    avatarSrc={avatarSrc}
+                    displayName={displayName}
+                    email={user?.email ?? 'user@example.com'}
+                />
             </div>
         </div>
     );

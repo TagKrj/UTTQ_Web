@@ -103,6 +103,8 @@ export default function ChooseMethod() {
         };
     }, [exerciseId, location.state?.exercise, location.state?.subject, subjectId]);
 
+    const subjectTitle = subject.title ?? subject.name;
+
     const methodCards = METHOD_CARDS.map((card) => ({
         ...card,
         onClick: card.key === 'summary'
@@ -134,7 +136,7 @@ export default function ChooseMethod() {
             <div className="mt-4 flex min-w-0 items-center gap-3">
                 <button
                     type="button"
-                    onClick={() => navigate(`/review/${subject.id}`)}
+                    onClick={() => navigate(-1)}
                     className="flex h-7 w-7 shrink-0 items-center justify-center text-[#212121] transition-opacity hover:opacity-75 cursor-pointer"
                     aria-label="Quay lại màn chi tiết môn học"
                 >
@@ -142,10 +144,19 @@ export default function ChooseMethod() {
                 </button>
 
                 <div className="flex min-w-0 items-center gap-3 text-[18px] font-semibold leading-[1.2] text-[#212121]">
-                    <span className="truncate">{subject.name}</span>
+                    <span className="truncate">{subjectTitle}</span>
                     <span className="shrink-0 text-[#6A5AE0]">•</span>
                     <span className="truncate font-semibold">{exercise.title}</span>
                 </div>
+            </div>
+
+            <div className="mt-3 rounded-2xl border border-[#efeefc] bg-white px-4 py-3 shadow-[0_8px_24px_rgba(17,24,39,0.04)]">
+                <p className="text-[14px] font-medium text-[#6A5AE0]">
+                    Mã môn: <span className="text-[#212121]">{subject.subjectCode || '—'}</span>
+                </p>
+                <p className="mt-1 text-[13px] font-normal text-[#858494]">
+                    {subject.description || 'Chưa có mô tả.'}
+                </p>
             </div>
 
             <div className="mt-5">

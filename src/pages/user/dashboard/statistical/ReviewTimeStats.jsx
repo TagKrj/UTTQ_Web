@@ -1,4 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
+import {
+    getReviewTimeStatsPeriod,
+    subscribeReviewActivities,
+} from '../../../../services/reviewActivityService';
 
 function ChevronDownIcon({ className = 'h-4 w-4' }) {
     return (
@@ -136,10 +140,11 @@ function ChartBars({ bars }) {
 
 export default function ReviewTimeStats() {
     const [selectedPeriod, setSelectedPeriod] = useState('day');
+    const [refreshToken, setRefreshToken] = useState(0);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const dropdownRef = useRef(null);
 
-    const activePeriod = REVIEW_TIME_PERIODS[selectedPeriod];
+    const activePeriod = getReviewTimeStatsPeriod(selectedPeriod, refreshToken);
 
     useEffect(() => {
         const handlePointerDown = (event) => {
@@ -156,6 +161,10 @@ export default function ReviewTimeStats() {
             document.removeEventListener('touchstart', handlePointerDown);
         };
     }, []);
+
+    useEffect(() => subscribeReviewActivities(() => {
+        setRefreshToken((currentToken) => currentToken + 1);
+    }), []);
 
     return (
         <div

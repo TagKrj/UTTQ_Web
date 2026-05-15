@@ -9,12 +9,15 @@ import SendIcon from '../../../../assets/icons/File Send.svg';
 import Rectangle83Background from '../../../../assets/imgs/Rectangle83.png';
 import PenIcon from '../../../../assets/icons/pen.svg';
 import {
-    PRACTICE_MULTIPLE_CHOICE_DEMO,
-} from '../../../../constants/practiceMultipleChoiceContent';
-import {
     createReviewSubject,
     getReviewSubjectById,
 } from '../../../../utils/reviewSubjects';
+import {
+    getOrCreateExamByDocument,
+    normalizeExam,
+} from '../../../../services/examsService';
+import { useSubjects } from '../../../../contexts/SubjectsContext';
+import { recordReviewActivity } from '../../../../services/reviewActivityService';
 
 function joinClassNames(...classes) {
     return classes.filter(Boolean).join(' ');
@@ -29,6 +32,14 @@ function formatElapsedTime(totalSeconds) {
 }
 
 const DEFAULT_QUESTION_INDEX = 4;
+
+function getExerciseDocumentId(exercise) {
+    return exercise?.documentId
+        ?? exercise?.document?.id
+        ?? exercise?.document?._id
+        ?? exercise?.document?.documentId
+        ?? exercise?.sourceDocumentId;
+}
 
 function buildInitialAnswers(questions) {
     return questions.reduce((accumulator, question) => {
@@ -208,6 +219,8 @@ export default function PracticeMultipleChoiceTests() {
     const location = useLocation();
     const navigate = useNavigate();
     const startedAtRef = useRef(Date.now());
+    const hasRecordedActivityRef = useRef(false);
+    const { updateExercise } = useSubjects();
 
     const { subject, exercise } = useMemo(() => {
         const stateSubject = location.state?.subject;
@@ -229,14 +242,70 @@ export default function PracticeMultipleChoiceTests() {
         };
     }, [exerciseId, location.state?.exercise, location.state?.subject, subjectId]);
 
-    const questions = PRACTICE_MULTIPLE_CHOICE_DEMO.questions;
-    const initialQuestionIndex = Math.min(DEFAULT_QUESTION_INDEX, Math.max(questions.length - 1, 0));
-    const [currentQuestionIndex, setCurrentQuestionIndex] = useState(initialQuestionIndex);
+    const documentId = getExerciseDocumentId(exercise);
+    const subjectTitle = subject.title ?? subject.name ?? 'Môn học';
+    const exerciseTitle = exercise?.title ?? 'Bài ôn tập';
+    const [questions, setQuestions] = useState([]);
+    const [isLoadingExam, setIsLoadingExam] = useState(true);
+    const [examError, setExamError] = useState('');
+    const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
     const [reviewQuestionIndex, setReviewQuestionIndex] = useState(0);
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [elapsedSeconds, setElapsedSeconds] = useState(0);
     const [frozenElapsedSeconds, setFrozenElapsedSeconds] = useState(null);
-    const [selectedAnswers, setSelectedAnswers] = useState(() => buildInitialAnswers(questions));
+    const [selectedAnswers, setSelectedAnswers] = useState({});
+
+    useEffect(() => {
+        let isMounted = true;
+
+        async function loadExam() {
+            if (!documentId) {
+                setIsLoadingExam(false);
+                setExamError('Bài tập này chưa có mã tài liệu từ backend. Vui lòng tải lại file PDF để sinh đề trắc nghiệm.');
+                return;
+            }
+
+            setIsLoadingExam(true);
+            setExamError('');
+            setIsSubmitted(false);
+            setFrozenElapsedSeconds(null);
+            setElapsedSeconds(0);
+            startedAtRef.current = Date.now();
+            hasRecordedActivityRef.current = false;
+
+            try {
+                const payload = await getOrCreateExamByDocument(documentId);
+                const normalizedExam = normalizeExam(payload);
+
+                if (!isMounted) return;
+
+                if (normalizedExam.questions.length === 0) {
+                    throw new Error('Đề trắc nghiệm chưa có câu hỏi.');
+                }
+
+                const initialQuestionIndex = Math.min(DEFAULT_QUESTION_INDEX, normalizedExam.questions.length - 1);
+                setQuestions(normalizedExam.questions);
+                setSelectedAnswers(buildInitialAnswers(normalizedExam.questions));
+                setCurrentQuestionIndex(initialQuestionIndex);
+                setReviewQuestionIndex(0);
+            } catch (error) {
+                if (!isMounted) return;
+                setExamError(error?.message || 'Không thể tải đề trắc nghiệm.');
+                setQuestions([]);
+                setSelectedAnswers({});
+            } finally {
+                if (isMounted) {
+                    setIsLoadingExam(false);
+                }
+            }
+        }
+
+        loadExam();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [documentId]);
 
     const questionResults = useMemo(() => questions.map((question) => {
         const selectedOptionIndex = selectedAnswers[question.id] ?? null;
@@ -267,8 +336,8 @@ export default function PracticeMultipleChoiceTests() {
         return () => window.clearInterval(timerId);
     }, [isSubmitted]);
 
-    const activeQuestion = questions[currentQuestionIndex];
-    const activeSelectedOptionIndex = selectedAnswers[activeQuestion.id] ?? null;
+    const activeQuestion = questions[currentQuestionIndex] ?? null;
+    const activeSelectedOptionIndex = activeQuestion ? selectedAnswers[activeQuestion.id] ?? null : null;
 
     function handleSelectOption(questionId, optionIndex) {
         if (isSubmitted) {
@@ -286,9 +355,37 @@ export default function PracticeMultipleChoiceTests() {
             return;
         }
 
-        setFrozenElapsedSeconds(elapsedSeconds);
+        const durationSeconds = Math.max(1, Math.floor((Date.now() - startedAtRef.current) / 1000));
+        setFrozenElapsedSeconds(durationSeconds);
         setIsSubmitted(true);
         setReviewQuestionIndex(0);
+
+        if (!hasRecordedActivityRef.current) {
+            hasRecordedActivityRef.current = true;
+            const progress = questions.length > 0 ? Math.round((correctCount / questions.length) * 100) : 0;
+
+            recordReviewActivity({
+                type: 'quiz',
+                subjectId,
+                subjectTitle,
+                subjectCode: subject.subjectCode,
+                exerciseId,
+                exerciseTitle,
+                documentId,
+                startedAt: new Date(startedAtRef.current).toISOString(),
+                durationSeconds,
+                progress,
+                score,
+                correctCount,
+                wrongCount,
+                blankCount,
+                totalItems: questions.length,
+            });
+            updateExercise(subjectId, exerciseId, {
+                progress,
+                latestAttemptedAt: 'Hôm nay',
+            });
+        }
     }
 
     const displayElapsedSeconds = isSubmitted
@@ -300,12 +397,7 @@ export default function PracticeMultipleChoiceTests() {
             <div className="mt-4 flex min-w-0 items-center gap-3">
                 <button
                     type="button"
-                    onClick={() => navigate(`/review/${subject.id}/choose-method/${exercise.id}`, {
-                        state: {
-                            subject,
-                            exercise,
-                        },
-                    })}
+                    onClick={() => navigate(-1)}
                     className="flex h-7 w-7 shrink-0 items-center justify-center text-[#212121] transition-opacity hover:opacity-75 cursor-pointer"
                     aria-label="Quay lại màn chọn phương pháp"
                 >
@@ -313,13 +405,25 @@ export default function PracticeMultipleChoiceTests() {
                 </button>
 
                 <div className="flex min-w-0 items-center gap-3 text-[18px] font-semibold leading-[1.2] text-[#212121]">
-                    <span className="truncate">{subject.name}</span>
+                    <span className="truncate">{subjectTitle}</span>
                     <span className="shrink-0 text-[#6A5AE0]">•</span>
-                    <span className="truncate font-semibold">{exercise.title}</span>
+                    <span className="truncate font-semibold">{exerciseTitle}</span>
                 </div>
             </div>
 
-            {!isSubmitted ? (
+            {isLoadingExam ? (
+                <div className="mt-8 rounded-[18px] bg-[#f7f7ff] px-5 py-6 text-[14px] text-[#858494]">
+                    Đang tải đề trắc nghiệm...
+                </div>
+            ) : examError ? (
+                <div className="mt-8 rounded-[18px] bg-[#fef2f2] px-5 py-6 text-[14px] text-[#b42318]">
+                    {examError}
+                </div>
+            ) : !activeQuestion ? (
+                <div className="mt-8 rounded-[18px] bg-[#f7f7ff] px-5 py-6 text-[14px] text-[#858494]">
+                    Đề trắc nghiệm chưa có câu hỏi.
+                </div>
+            ) : !isSubmitted ? (
                 <div className="flex min-h-0 flex-1 flex-col pb-2">
                     <div className="mt-5 flex items-center justify-between gap-4">
                         <h1 className="text-[20px] font-semibold leading-[1.2] text-[#6A5AE0]">

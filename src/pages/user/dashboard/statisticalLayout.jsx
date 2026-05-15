@@ -1,15 +1,21 @@
 import React, { useState } from 'react';
+import { useEffect } from 'react';
 import ReviewResultsStats from './statistical/ReviewResultsStats';
 import ReviewTimeStats from './statistical/ReviewTimeStats';
 import { ReviewSubjectDetailList, ReviewSubjectPieChartCard } from './statistical/ReviewSubjectStats';
 import {
-    REVIEW_SUBJECT_STATS_BY_PERIOD,
-    REVIEW_SUBJECT_STATS_DEFAULT_PERIOD,
-} from '../../../constants/reviewSubjectStats';
+    getReviewSubjectStatsByPeriod,
+    subscribeReviewActivities,
+} from '../../../services/reviewActivityService';
 
 export default function StatisticalLayout() {
-    const [selectedPeriod, setSelectedPeriod] = useState(REVIEW_SUBJECT_STATS_DEFAULT_PERIOD);
-    const activePeriod = REVIEW_SUBJECT_STATS_BY_PERIOD[selectedPeriod];
+    const [selectedPeriod, setSelectedPeriod] = useState('week');
+    const [refreshToken, setRefreshToken] = useState(0);
+    const activePeriod = getReviewSubjectStatsByPeriod(selectedPeriod, refreshToken);
+
+    useEffect(() => subscribeReviewActivities(() => {
+        setRefreshToken((currentToken) => currentToken + 1);
+    }), []);
 
     return (
         <div className="flex h-full w-full justify-center overflow-auto bg-white rounded-[20px] border border-[#E5E7EB] px-6 py-6 thin-scrollbar">

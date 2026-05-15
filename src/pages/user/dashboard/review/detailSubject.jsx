@@ -1,10 +1,11 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import AddExercise from '../../../../components/popup/addExercise';
+import { useSubjects } from '../../../../contexts/SubjectsContext';
 import {
-    createReviewSubject,
-    getReviewSubjectById,
-} from '../../../../utils/reviewSubjects';
+    fetchDocumentById,
+    normalizeDocument,
+} from '../../../../services/documentsService';
 import BackArrowIcon from '../../../../assets/icons/Arrow-Left.svg';
 import AddCircleIcon from '../../../../assets/icons/Add-Circle.svg';
 import StarWhiteIcon from '../../../../assets/icons/StarWhite.svg';
@@ -113,41 +114,132 @@ function ExerciseCard({ exercise, onClick }) {
     );
 }
 
+function createEmptySubject(subjectId) {
+    return {
+        id: String(subjectId ?? ''),
+        title: 'Môn học',
+        name: 'Môn học',
+        subjectCode: String(subjectId ?? ''),
+        description: '',
+        unfinishedCount: 0,
+        completedCount: 0,
+        exercises: [],
+        source: 'local',
+    };
+}
+
 export default function DetailSubject() {
     const { subjectId } = useParams();
     const navigate = useNavigate();
     const location = useLocation();
+    const { getSubjectById, ensureSubject, appendExercises } = useSubjects();
+    const seededSubject = location.state?.id === String(subjectId) ? normalizeDocument(location.state) : null;
+    const [documentDetail, setDocumentDetail] = useState(seededSubject);
+    const [isLoading, setIsLoading] = useState(Boolean(subjectId && !seededSubject?.isNewSubject && seededSubject?.source !== 'local'));
+    const [loadError, setLoadError] = useState('');
     const [isAddExerciseOpen, setIsAddExerciseOpen] = useState(false);
 
-    const subject = useMemo(() => {
-        const matchedSubject = getReviewSubjectById(subjectId);
+    useEffect(() => {
+        const fromContext = getSubjectById(subjectId);
+        const isLocalSubject = location.state?.isNewSubject || fromContext?.isNewSubject || fromContext?.source === 'local';
 
-        if (matchedSubject) {
-            return matchedSubject;
+        if (!subjectId || isLocalSubject) {
+            setIsLoading(false);
+            if (fromContext) {
+                setDocumentDetail(fromContext);
+            }
+            return undefined;
+        }
+
+        let isMounted = true;
+
+        async function loadDocumentDetail() {
+            setIsLoading(true);
+            setLoadError('');
+
+            try {
+                const payload = await fetchDocumentById(subjectId);
+                const normalized = { ...normalizeDocument(payload), source: 'api' };
+
+                if (!isMounted) return;
+
+                setDocumentDetail(normalized);
+                ensureSubject(normalized);
+            } catch (error) {
+                if (!isMounted) return;
+                setLoadError(error?.message || 'Không thể tải chi tiết môn học.');
+            } finally {
+                if (isMounted) {
+                    setIsLoading(false);
+                }
+            }
+        }
+
+        loadDocumentDetail();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [ensureSubject, getSubjectById, location.state?.isNewSubject, subjectId]);
+
+    const subject = useMemo(() => {
+        const fromContext = getSubjectById(subjectId);
+
+        if (fromContext) {
+            const detailExercises = Array.isArray(documentDetail?.exercises) ? documentDetail.exercises : [];
+            const contextExercises = Array.isArray(fromContext.exercises) ? fromContext.exercises : [];
+
+            return {
+                ...documentDetail,
+                ...fromContext,
+                name: fromContext.title ?? fromContext.name ?? documentDetail?.name,
+                exercises: contextExercises.length >= detailExercises.length ? contextExercises : detailExercises,
+            };
+        }
+
+        if (documentDetail) {
+            return {
+                ...documentDetail,
+                exercises: Array.isArray(documentDetail.exercises) ? documentDetail.exercises : [],
+            };
         }
 
         if (location.state?.id === String(subjectId)) {
-            return location.state;
+            return normalizeDocument(location.state);
         }
 
-        return createReviewSubject({
-            id: subjectId || '0',
-            name: subjectId ? String(subjectId) : 'Môn học',
-            documents: '0 tài liệu đã tải',
+        return createEmptySubject(subjectId);
+    }, [documentDetail, getSubjectById, location.state, subjectId]);
+
+    const handleAddExerciseSuccess = ({ exercises } = {}) => {
+        const nextExercises = exercises ?? [];
+        appendExercises(subjectId, nextExercises);
+
+        if (nextExercises.length === 0) return;
+
+        setDocumentDetail((current) => {
+            const base = current ?? subject;
+            const existingExercises = Array.isArray(base.exercises) ? base.exercises : [];
+
+            return {
+                ...base,
+                exercises: [...existingExercises, ...nextExercises],
+                fileCount: (base.fileCount ?? 0) + nextExercises.length,
+            };
         });
-    }, [location.state, subjectId]);
+    };
 
     return (
         <div className="flex min-h-0 flex-1 flex-col">
             <div className="mt-4 flex items-center justify-between gap-6">
                 <button
                     type="button"
-                    onClick={() => navigate('/review')}
+                    onClick={() => navigate(-1)}
                     className="flex min-w-0 items-center gap-3 text-left cursor-pointer"
                 >
                     <img src={BackArrowIcon} alt="" aria-hidden="true" className="h-7 w-7 shrink-0" />
                     <h1 className="truncate text-[18px] font-semibold leading-[1.2] text-[#212121]">
-                        {subject.name}
+                        {subject.title || subject.name}
                     </h1>
                 </button>
 
@@ -161,16 +253,28 @@ export default function DetailSubject() {
                 </button>
             </div>
 
+            {isLoading ? (
+                <div className="mt-4 text-[14px] text-[#858494]">
+                    Đang tải chi tiết môn học...
+                </div>
+            ) : null}
+
+            {!isLoading && loadError && !documentDetail ? (
+                <div className="mt-4 rounded-[10px] bg-[#fef2f2] px-4 py-3 text-[14px] text-[#b42318]">
+                    {loadError}
+                </div>
+            ) : null}
+
             <div className="mt-5 flex min-h-0 flex-1 items-start justify-between gap-[30px]">
                 <div className="flex w-[243px] shrink-0 flex-col gap-5">
                     <div className="flex h-[177px] flex-col justify-between rounded-[10px] bg-[#7152f3] p-5">
-                        <MetricItem icon={StarWhiteIcon} label="Chưa xong: " value={subject.unfinishedCount} />
-                        <MetricItem icon={CalendarCheckIcon} label="Hoàn Thành: " value={subject.completedCount} />
+                        <MetricItem icon={StarWhiteIcon} label="Chưa xong: " value={subject.unfinishedCount ?? 0} />
+                        <MetricItem icon={CalendarCheckIcon} label="Hoàn Thành: " value={subject.completedCount ?? 0} />
                         <MetricItem icon={FileIcon} label="Mã môn: " value={subject.subjectCode} />
                     </div>
 
-                    <p className="text-[13px] leading-normal font-normal text-[#858494]">
-                        {subject.description}
+                    <p className="text-[13px] font-normal leading-normal text-[#858494]">
+                        {subject.description || 'Chưa có mô tả.'}
                     </p>
                 </div>
 
@@ -179,7 +283,13 @@ export default function DetailSubject() {
                         Danh sách bài tập
                     </h2>
 
-                    <div className="flex flex-col gap-3 max-h-[700px] overflow-y-auto thin-scrollbar pb-10">
+                    <div className="flex max-h-[700px] flex-col gap-3 overflow-y-auto pb-10 thin-scrollbar">
+                        {subject.exercises.length === 0 ? (
+                            <div className="py-5 text-[14px] text-[#858494]">
+                                Chưa có bài tập nào cho môn học này.
+                            </div>
+                        ) : null}
+
                         {subject.exercises.map((exercise) => (
                             <ExerciseCard
                                 key={exercise.id}
@@ -199,7 +309,8 @@ export default function DetailSubject() {
             <AddExercise
                 open={isAddExerciseOpen}
                 onClose={() => setIsAddExerciseOpen(false)}
-                onSubmit={() => setIsAddExerciseOpen(false)}
+                onSuccess={handleAddExerciseSuccess}
+                subjectId={subjectId}
             />
         </div>
     );

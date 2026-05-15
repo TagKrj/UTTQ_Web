@@ -1,222 +1,211 @@
 import React, { useEffect, useRef, useState } from 'react';
-
-const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
-const ALLOWED_MIME_TYPES = [
-    'application/pdf',
-    'application/msword',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-];
-const ALLOWED_EXTENSIONS = ['.pdf', '.doc', '.docx'];
+import { useNavigate } from 'react-router-dom';
+import { useSubjects } from '../../contexts/SubjectsContext';
 
 const DEFAULT_FORM = {
+    subjectCode: '',
     title: '',
     description: '',
-    file: null,
 };
 
-function isAllowedFile(file) {
-    if (!file) {
-        return false;
-    }
+export default function AddSubjectModal({ onSuccess } = {}) {
+    const navigate = useNavigate();
+    const { addSubject } = useSubjects();
 
-    const fileName = file.name.toLowerCase();
-    const hasAllowedExtension = ALLOWED_EXTENSIONS.some((extension) => fileName.endsWith(extension));
-
-    return ALLOWED_MIME_TYPES.includes(file.type) || hasAllowedExtension;
-}
-
-export default function AddSubject({ open, onClose, onSubmit, loading = false, error = '', successMessage = '' }) {
+    const [isOpen, setIsOpen] = useState(false);
     const [formData, setFormData] = useState(DEFAULT_FORM);
-    const [formError, setFormError] = useState('');
-    const fileInputRef = useRef(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [toast, setToast] = useState(null);
+    const toastTimerRef = useRef(null);
 
     useEffect(() => {
-        if (open) {
-            setFormData(DEFAULT_FORM);
-            setFormError('');
-
-            if (fileInputRef.current) {
-                fileInputRef.current.value = '';
-            }
-        }
-    }, [open]);
-
-    useEffect(() => {
-        if (!open) {
-            return undefined;
-        }
+        if (!isOpen) return undefined;
 
         const previousOverflow = document.body.style.overflow;
-
-        const handleKeyDown = (event) => {
-            if (event.key === 'Escape') {
-                onClose?.();
-            }
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') closeModal();
         };
 
         document.body.style.overflow = 'hidden';
         window.addEventListener('keydown', handleKeyDown);
-
         return () => {
             document.body.style.overflow = previousOverflow;
             window.removeEventListener('keydown', handleKeyDown);
         };
-    }, [open, onClose]);
+    }, [isOpen]);
 
-    if (!open) {
-        return null;
-    }
+    useEffect(() => () => {
+        if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    }, []);
 
-    const handleBackdropClick = () => {
-        onClose?.();
+    const showToast = (message, type = 'error') => {
+        setToast({ message, type });
+        if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+        toastTimerRef.current = setTimeout(() => setToast(null), 3000);
     };
 
-    const handleFileChange = (event) => {
-        const file = event.target.files?.[0] ?? null;
-
-        setFormError('');
-
-        if (!file) {
-            setFormData((currentForm) => ({ ...currentForm, file: null }));
-            return;
-        }
-
-        if (!isAllowedFile(file)) {
-            setFormError('Vui lòng chọn file .pdf, .doc hoặc .docx.');
-            setFormData((currentForm) => ({ ...currentForm, file: null }));
-            event.target.value = '';
-            return;
-        }
-
-        if (file.size > MAX_FILE_SIZE_BYTES) {
-            setFormError('File tải lên vượt quá 5MB.');
-            setFormData((currentForm) => ({ ...currentForm, file: null }));
-            event.target.value = '';
-            return;
-        }
-
-        setFormData((currentForm) => ({ ...currentForm, file }));
+    const closeModal = () => {
+        setIsOpen(false);
+        setFormData(DEFAULT_FORM);
     };
 
-    const handleSubmit = async () => {
-        setFormError('');
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setFormData((c) => ({ ...c, [name]: value }));
+    };
 
+    const handleSubmit = () => {
+        if (isSubmitting) return;
+
+        if (!formData.subjectCode.trim()) {
+            showToast('Vui lòng nhập mã môn học.');
+            return;
+        }
         if (!formData.title.trim()) {
-            setFormError('Vui lòng nhập tiêu đề tài liệu.');
+            showToast('Vui lòng nhập tên môn học.');
             return;
         }
 
-        if (!formData.file) {
-            setFormError('Vui lòng chọn tài liệu để tải lên.');
-            return;
-        }
+        setIsSubmitting(true);
 
-        try {
-            await onSubmit?.({
-                title: formData.title.trim(),
-                description: formData.description.trim(),
-                file: formData.file,
-            });
+        const newSubject = addSubject({
+            id: crypto.randomUUID(),
+            subjectCode: formData.subjectCode.trim(),
+            title: formData.title.trim(),
+            description: formData.description.trim(),
+            fileCount: 0,
+            isNewSubject: true,
+            source: 'local',
+        });
 
-            setFormData(DEFAULT_FORM);
-            if (fileInputRef.current) {
-                fileInputRef.current.value = '';
-            }
-        } catch {
-            // Errors are surfaced via props.
-        }
+        setIsSubmitting(false);
+        closeModal();
+        onSuccess?.();
+
+        navigate(`/review/${newSubject.id}`, { state: { ...newSubject, isNewSubject: true } });
     };
 
     return (
-        <div
-            className="fixed inset-0 z-[80] flex items-center justify-center bg-[rgba(255,255,255,0.72)] px-4 py-6 backdrop-blur-sm"
-            onMouseDown={handleBackdropClick}
-            role="presentation"
-        >
-            <div
-                className="w-full max-w-[456px] overflow-hidden rounded-[20px] bg-white px-5 pb-5 pt-5 shadow-[0_24px_80px_rgba(17,24,39,0.12)]"
-                onMouseDown={(event) => event.stopPropagation()}
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="add-subject-title"
+        <div className="font-sans">
+            <button
+                type="button"
+                onClick={() => setIsOpen(true)}
+                className="flex h-10 items-center gap-2 rounded-full bg-[#7152f3] px-4 text-[16px] font-medium leading-6 text-white shadow-[4px_8px_24px_0_rgba(77,93,250,0.25)] transition-colors hover:bg-[#5a44d0]"
             >
-                <h2
-                    id="add-subject-title"
-                    className="text-[20px] font-semibold leading-[30px] text-[#16151c]"
+                <span>Thêm +</span>
+            </button>
+
+            {isOpen ? (
+                <div
+                    className="fixed inset-0 z-[80] flex items-center justify-center bg-[rgba(15,18,32,0.35)] px-4 py-6 backdrop-blur-sm"
+                    onMouseDown={closeModal}
+                    role="presentation"
                 >
-                    Thêm môn học
-                </h2>
-
-                <div className="mt-5 h-px w-full bg-[#F3F4F6]" />
-
-                <div className="mx-auto mt-14 flex w-[380px] flex-col gap-2.5">
-                    <label htmlFor="upload-file" className="text-[12px] font-light text-[#9e9e9e]">
-                        Tài liệu (PDF/DOC/DOCX, tối đa 5MB)
-                    </label>
-                    <input
-                        ref={fileInputRef}
-                        id="upload-file"
-                        type="file"
-                        accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                        aria-label="Tải tài liệu"
-                        onChange={handleFileChange}
-                        className="h-14 w-full rounded-xl bg-[#fafafa] px-5 text-[14px] leading-[1.4] tracking-[0.2px] text-[#16151c] outline-none file:mr-4 file:rounded-full file:border-0 file:bg-[#6a5ae0] file:px-4 file:py-2 file:text-white file:shadow-[4px_8px_24px_0_rgba(77,93,250,0.2)] file:cursor-pointer"
-                    />
-                    {formData.file ? (
-                        <p className="text-[12px] font-light text-[#616161]">
-                            Đã chọn: {formData.file.name}
-                        </p>
-                    ) : null}
-
-                    <input
-                        type="text"
-                        aria-label="Tiêu đề tài liệu"
-                        placeholder="Tiêu đề tài liệu"
-                        value={formData.title}
-                        onChange={(event) => setFormData((currentForm) => ({ ...currentForm, title: event.target.value }))}
-                        className="h-14 w-full rounded-xl bg-[#fafafa] px-5 text-[14px] leading-[1.4] tracking-[0.2px] text-[#16151c] outline-none placeholder:text-[#9e9e9e] focus:ring-1 focus:ring-[#6a5ae0]/15 font-light"
-                    />
-
-                    <textarea
-                        aria-label="Nhập mô tả (tùy chọn)"
-                        placeholder="Nhập mô tả (tùy chọn)"
-                        value={formData.description}
-                        onChange={(event) => setFormData((currentForm) => ({ ...currentForm, description: event.target.value }))}
-                        className="h-[150px] w-full resize-none rounded-xl bg-[#fafafa] px-5 py-4 text-[14px] leading-[1.4] tracking-[0.2px] text-[#16151c] outline-none placeholder:text-[#9e9e9e] focus:ring-1 focus:ring-[#6a5ae0]/15 font-light"
-                    />
-                </div>
-
-                <div className="mx-auto mt-8 flex w-[342px] items-center justify-between gap-2.5">
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="flex h-[50px] w-[166px] items-center justify-center rounded-full border border-[rgba(162,161,168,0.2)] bg-white text-[16px] leading-none text-[#16151c] transition-colors hover:bg-[#fafafa] cursor-pointer"
+                    <div
+                        className="w-full max-w-[460px] overflow-hidden rounded-[20px] bg-white px-6 pb-6 pt-5 shadow-[0_24px_80px_rgba(17,24,39,0.16)]"
+                        onMouseDown={(e) => e.stopPropagation()}
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="add-subject-title"
                     >
-                        Hủy
-                    </button>
+                        <div className="flex items-center justify-between">
+                            <h2
+                                id="add-subject-title"
+                                className="text-[20px] font-semibold leading-[30px] text-[#16151c]"
+                            >
+                                Thêm môn học
+                            </h2>
+                            <button
+                                type="button"
+                                onClick={closeModal}
+                                aria-label="Đóng"
+                                className="flex h-8 w-8 items-center justify-center rounded-full text-[#8b8b99] transition-colors hover:bg-[#f4f1ff] hover:text-[#6A5AE0]"
+                            >
+                            </button>
+                        </div>
 
-                    <button
-                        type="button"
-                        onClick={handleSubmit}
-                        disabled={loading}
-                        className="flex h-[50px] w-[166px] items-center justify-center rounded-full bg-[#6a5ae0] text-[16px] leading-none text-white transition-colors hover:bg-[#5b4ed0] cursor-pointer shadow-[4px_8px_24px_0_rgba(77,93,250,0.25)] disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                        {loading ? 'Đang tải...' : 'Tải lên'}
-                    </button>
+                        <div className="mt-5 h-px w-full bg-[#F3F4F6]" />
+
+                        <div className="mt-6 flex flex-col gap-4">
+                            <div>
+                                <label className="mb-2 block text-[13px] font-medium text-[#6c6c7b]">
+                                    Mã môn học
+                                </label>
+                                <input
+                                    type="text"
+                                    name="subjectCode"
+                                    value={formData.subjectCode}
+                                    onChange={handleChange}
+                                    placeholder="Nhập mã môn học"
+                                    className="h-12 w-full rounded-xl border border-[#edeaf6] bg-[#fafafa] px-4 text-[14px] text-[#16151c] outline-none transition focus:border-[#6A5AE0] focus:ring-2 focus:ring-[#6A5AE0]/15"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="mb-2 block text-[13px] font-medium text-[#6c6c7b]">
+                                    Tên môn học
+                                </label>
+                                <input
+                                    type="text"
+                                    name="title"
+                                    value={formData.title}
+                                    onChange={handleChange}
+                                    placeholder="Nhập tên môn học"
+                                    className="h-12 w-full rounded-xl border border-[#edeaf6] bg-[#fafafa] px-4 text-[14px] text-[#16151c] outline-none transition focus:border-[#6A5AE0] focus:ring-2 focus:ring-[#6A5AE0]/15"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="mb-2 block text-[13px] font-medium text-[#6c6c7b]">
+                                    Mô tả
+                                </label>
+                                <textarea
+                                    name="description"
+                                    value={formData.description}
+                                    onChange={handleChange}
+                                    placeholder="Nhập mô tả (tùy chọn)"
+                                    rows={3}
+                                    className="h-[100px] w-full resize-none rounded-xl border border-[#edeaf6] bg-[#fafafa] px-4 py-3 text-[14px] text-[#16151c] outline-none transition focus:border-[#6A5AE0] focus:ring-2 focus:ring-[#6A5AE0]/15"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="mt-6 flex items-center justify-end gap-3">
+                            <button
+                                type="button"
+                                onClick={closeModal}
+                                className="h-11 rounded-full border border-[#e4e0f2] px-5 text-[14px] font-medium text-[#5c5c6b] transition hover:bg-[#f6f5fb]"
+                            >
+                                Hủy
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleSubmit}
+                                disabled={isSubmitting}
+                                className="flex h-11 items-center justify-center gap-2 rounded-full bg-[#6A5AE0] px-6 text-[14px] font-semibold text-white shadow-[0_12px_30px_rgba(106,90,224,0.25)] transition hover:bg-[#5b4ed0] disabled:cursor-not-allowed disabled:opacity-70"
+                            >
+                                {isSubmitting ? (
+                                    <span className="flex items-center gap-2">
+                                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                                        Đang thêm...
+                                    </span>
+                                ) : (
+                                    'Thêm mới'
+                                )}
+                            </button>
+                        </div>
+                    </div>
                 </div>
+            ) : null}
 
-                {formError || error ? (
-                    <p className="mt-4 text-center text-[13px] font-light text-red-500" aria-live="polite">
-                        {formError || error}
-                    </p>
-                ) : null}
-
-                {successMessage ? (
-                    <p className="mt-3 text-center text-[13px] font-light text-emerald-600" aria-live="polite">
-                        {successMessage}
-                    </p>
-                ) : null}
-            </div>
+            {toast ? (
+                <div
+                    className={`fixed right-6 top-6 z-[90] rounded-xl px-4 py-3 text-[13px] font-medium shadow-[0_12px_30px_rgba(15,18,32,0.18)] ${toast.type === 'success' ? 'bg-[#ecfdf5] text-[#067647]' : 'bg-[#fef2f2] text-[#b42318]'}`}
+                    role="status"
+                >
+                    {toast.message}
+                </div>
+            ) : null}
         </div>
     );
 }

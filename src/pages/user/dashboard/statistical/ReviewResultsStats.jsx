@@ -2,9 +2,12 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
     REVIEW_RESULTS_AXIS_LABELS,
     REVIEW_RESULTS_DEFAULT_PERIOD,
-    REVIEW_RESULTS_STATS_BY_PERIOD,
     REVIEW_RESULTS_TIME_OPTIONS,
 } from '../../../../constants/reviewResultsStats';
+import {
+    getReviewResultsStatsByPeriod,
+    subscribeReviewActivities,
+} from '../../../../services/reviewActivityService';
 
 function ChevronDownIcon() {
     return (
@@ -55,11 +58,12 @@ function Tooltip({ bar, left, bottom, visible }) {
 
 export default function ReviewResultsStats() {
     const [selectedPeriod, setSelectedPeriod] = useState(REVIEW_RESULTS_DEFAULT_PERIOD);
+    const [refreshToken, setRefreshToken] = useState(0);
     const [hoveredBarIndex, setHoveredBarIndex] = useState(null);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const dropdownRef = useRef(null);
 
-    const activePeriod = REVIEW_RESULTS_STATS_BY_PERIOD[selectedPeriod];
+    const activePeriod = getReviewResultsStatsByPeriod(selectedPeriod, refreshToken);
     const tooltipBarIndex = hoveredBarIndex ?? activePeriod.defaultActiveIndex;
     const tooltipBar = activePeriod.bars[tooltipBarIndex] ?? activePeriod.bars[0];
     const selectedPeriodLabel = REVIEW_RESULTS_TIME_OPTIONS.find((option) => option.value === selectedPeriod)?.label ?? 'Tuần này';
@@ -67,6 +71,10 @@ export default function ReviewResultsStats() {
     useEffect(() => {
         setHoveredBarIndex(null);
     }, [activePeriod.defaultActiveIndex, selectedPeriod]);
+
+    useEffect(() => subscribeReviewActivities(() => {
+        setRefreshToken((currentToken) => currentToken + 1);
+    }), []);
 
     useEffect(() => {
         const handlePointerDown = (event) => {

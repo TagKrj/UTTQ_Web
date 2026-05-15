@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Logo2 from '../../assets/icons/logo2.svg';
 import { SIDEBAR_OPTIONS, THEME_OPTIONS } from '../../constants/sideBar';
+import { useTheme } from '../../contexts/ThemeContext';
 
 const MENU_ROUTE_MAP = {
     '/': 'Thống kê',
@@ -18,10 +19,8 @@ const MENU_PATH_MAP = {
     'Cài đặt': '/setting',
 };
 
-const ACTIVE_THEME_LABEL = 'Sáng';
-
-function SidebarItem({ icon: Icon, label, active, onClick }) {
-    const iconNode = Icon({ color: active ? '#6949FF' : '#212121' });
+function SidebarItem({ icon: Icon, label, active, isDark, onClick }) {
+    const iconNode = Icon({ color: active ? '#6949FF' : isDark ? '#F5F7FB' : '#212121' });
 
     return (
         <button
@@ -45,8 +44,8 @@ function SidebarItem({ icon: Icon, label, active, onClick }) {
     );
 }
 
-function ThemeToggleItem({ icon: Icon, label, active, onClick }) {
-    const iconNode = Icon({ color: active ? '#FFFFFF' : '#16151C' });
+function ThemeToggleItem({ icon: Icon, label, active, isDark, onClick }) {
+    const iconNode = Icon({ color: active ? '#FFFFFF' : isDark ? '#F5F7FB' : '#16151C' });
 
     return (
         <button
@@ -64,9 +63,10 @@ function ThemeToggleItem({ icon: Icon, label, active, onClick }) {
 }
 
 export default function SideBar() {
-    const [activeThemeLabel, setActiveThemeLabel] = useState(ACTIVE_THEME_LABEL);
     const location = useLocation();
     const navigate = useNavigate();
+    const { theme, isDark, setTheme } = useTheme();
+    const activeThemeLabel = theme === 'dark' ? 'Tối' : 'Sáng';
 
     const activeMenuLabel = MENU_ROUTE_MAP[location.pathname] ?? 'Thống kê';
 
@@ -75,7 +75,7 @@ export default function SideBar() {
     };
 
     return (
-        <aside className="relative h-full w-[280px] shrink-0 overflow-hidden rounded-[20px] bg-[#EDEFFF]">
+        <aside className="app-sidebar relative h-full w-[280px] shrink-0 overflow-hidden rounded-[20px] bg-[#EDEFFF] transition-colors duration-300">
             <div className="absolute left-[30px] top-[31px] flex w-[140px] items-center justify-between">
                 <img src={Logo2} alt="UTTQ" className="h-[38px] w-[38px] shrink-0" />
                 <span
@@ -93,6 +93,7 @@ export default function SideBar() {
                         icon={item.icon}
                         label={item.label}
                         active={item.label === activeMenuLabel}
+                        isDark={isDark}
                         onClick={() => handleMenuClick(item.label)}
                     />
                 ))}
@@ -110,7 +111,8 @@ export default function SideBar() {
                                 icon={item.icon}
                                 label={item.label}
                                 active={item.label === activeThemeLabel}
-                                onClick={() => setActiveThemeLabel(item.label)}
+                                isDark={isDark}
+                                onClick={() => setTheme(item.label === 'Tối' ? 'dark' : 'light')}
                             />
                         ))}
                     </div>

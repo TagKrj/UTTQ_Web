@@ -8,9 +8,9 @@ const DEFAULT_FORM = {
 
 function toFormData(values = DEFAULT_FORM) {
     return {
-        subjectCode: values.subjectCode ?? '',
-        subjectName: values.subjectName ?? '',
-        description: values.description ?? '',
+        subjectCode: values?.subjectCode ?? '',
+        subjectName: values?.title ?? '',
+        description: values?.description ?? '',
     };
 }
 

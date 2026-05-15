@@ -1,5 +1,7 @@
+import React from 'react';
 import MainLayout from '../layouts/user/MainLayout';
 import ReviewLayout from '../pages/user/dashboard/reviewLayout';
+import { SubjectsProvider } from '../contexts/SubjectsContext';
 import ListSubjects from '../pages/user/dashboard/review/listSubjects';
 import DetailSubject from '../pages/user/dashboard/review/detailSubject';
 import ChooseMethod from '../pages/user/dashboard/review/chooseMethod';
@@ -14,7 +16,11 @@ export const reviewRoutes = [
         element: <MainLayout />,
         children: [
             {
-                element: <ReviewLayout />,
+                element: (
+                    <SubjectsProvider>
+                        <ReviewLayout />
+                    </SubjectsProvider>
+                ),
                 children: [
                     {
                         index: true,

@@ -70,6 +70,33 @@ export function clearStoredAuth() {
 	clearAuthFromStorage(window.sessionStorage);
 }
 
+export function updateStoredAuthUser(updates) {
+	if (!isClient()) {
+		return null;
+	}
+
+	const localAuth = readAuthFromStorage(window.localStorage);
+	const sessionAuth = readAuthFromStorage(window.sessionStorage);
+	const storage = localAuth ? window.localStorage : sessionAuth ? window.sessionStorage : null;
+	const currentAuth = localAuth ?? sessionAuth;
+
+	if (!storage || !currentAuth?.user) {
+		return null;
+	}
+
+	const nextAuth = {
+		...currentAuth,
+		user: {
+			...currentAuth.user,
+			...updates,
+		},
+	};
+
+	writeAuthToStorage(storage, nextAuth);
+	window.dispatchEvent(new CustomEvent('myweb:auth-updated', { detail: nextAuth }));
+	return nextAuth;
+}
+
 export async function login(credentials, { rememberMe = false } = {}) {
 	const response = await fetch(API_ENDPOINTS.AUTH.LOGIN, {
 		method: 'POST',

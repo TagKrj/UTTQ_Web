@@ -1,32 +1,14 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Pagination from '../../../../components/pagination';
 import AddSubject from '../../../../components/popup/addSubject';
 import EditSubject from '../../../../components/popup/editSubject';
+import { useSubjects } from '../../../../contexts/SubjectsContext';
 import {
     SwitchSvg as SortIcon,
     EditSvg as EditIcon,
     RemoveSvg as RemoveIcon,
 } from '../../../../constants/dashboardIcon';
-import { REVIEW_SUBJECTS } from '../../../../utils/reviewSubjects';
-import { uploadDocument } from '../../../../services/documentsService';
-
-function PlusIcon() {
-    return (
-        <svg
-            width="20"
-            height="20"
-            viewBox="0 0 20 20"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            aria-hidden="true"
-            className="h-5 w-5 shrink-0"
-        >
-            <circle cx="10" cy="10" r="9" stroke="currentColor" strokeWidth="1.5" />
-            <path d="M10 6.5V13.5M6.5 10H13.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-        </svg>
-    );
-}
 
 function ActionButton({ icon, label, onClick }) {
     const IconComponent = icon;
@@ -46,10 +28,10 @@ function ActionButton({ icon, label, onClick }) {
     );
 }
 
-function RowItem({ subject, documents, onClick, onDelete, onEdit }) {
+function RowItem({ subjectCode, title, fileCount, onClick, onDelete, onEdit }) {
     return (
         <div
-            className="grid cursor-pointer grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)_96px] items-center rounded-[10px] border-b border-[#F3F4F6] py-5 transition-colors hover:bg-[#EDEFFF] last:border-b-0"
+            className="grid cursor-pointer grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)_minmax(0,1fr)_80px] items-center rounded-[10px] border-b border-[#F3F4F6] py-5 transition-colors hover:bg-[#EDEFFF] last:border-b-0"
             onClick={onClick}
             onKeyDown={(event) => {
                 if (event.key === 'Enter' || event.key === ' ') {
@@ -62,13 +44,19 @@ function RowItem({ subject, documents, onClick, onDelete, onEdit }) {
         >
             <div className="min-w-0">
                 <p className="truncate text-[14px] font-light leading-6 text-[#16151c]">
-                    {subject}
+                    {subjectCode || '-'}
                 </p>
             </div>
 
             <div className="min-w-0">
                 <p className="truncate text-[14px] font-light leading-6 text-[#16151c]">
-                    {documents}
+                    {title || '-'}
+                </p>
+            </div>
+
+            <div className="min-w-0">
+                <p className="truncate text-[14px] font-light leading-6 text-[#16151c]">
+                    {fileCount}
                 </p>
             </div>
 
@@ -81,27 +69,37 @@ function RowItem({ subject, documents, onClick, onDelete, onEdit }) {
 }
 
 export default function ListSubjects() {
+    const { subjects: contextSubjects, updateSubject, deleteSubject } = useSubjects();
     const [sortOrder, setSortOrder] = useState('newest');
-    const [rows, setRows] = useState(REVIEW_SUBJECTS);
-    const [isAddSubjectOpen, setIsAddSubjectOpen] = useState(false);
     const [isEditSubjectOpen, setIsEditSubjectOpen] = useState(false);
     const [subjectBeingEdited, setSubjectBeingEdited] = useState(null);
-    const [uploadStatus, setUploadStatus] = useState({
-        loading: false,
-        error: '',
-        success: '',
-    });
+    const [toast, setToast] = useState(null);
+    const toastTimerRef = useRef(null);
     const navigate = useNavigate();
 
-    const visibleRows = sortOrder === 'newest' ? [...rows].reverse() : rows;
+    useEffect(() => {
+        if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+        return () => {
+            if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+        };
+    }, []);
 
-    const openAddSubjectModal = () => {
-        setUploadStatus({
-            loading: false,
-            error: '',
-            success: '',
-        });
-        setIsAddSubjectOpen(true);
+    const normalizedSubjects = contextSubjects.map((subject) => ({
+        ...subject,
+        source: subject.source ?? 'local',
+        fileCount: Array.isArray(subject.exercises)
+            ? subject.exercises.length
+            : subject.fileCount ?? 0,
+    }));
+
+    const visibleRows = sortOrder === 'newest'
+        ? [...normalizedSubjects].reverse()
+        : normalizedSubjects;
+
+    const showToast = (message, type = 'error') => {
+        setToast({ message, type });
+        if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+        toastTimerRef.current = setTimeout(() => setToast(null), 3000);
     };
 
     const openEditSubjectModal = (subject) => {
@@ -109,52 +107,19 @@ export default function ListSubjects() {
         setIsEditSubjectOpen(true);
     };
 
-    const closeAddSubjectModal = () => {
-        setIsAddSubjectOpen(false);
-        setUploadStatus({
-            loading: false,
-            error: '',
-            success: '',
-        });
-    };
-
     const closeEditSubjectModal = () => {
         setIsEditSubjectOpen(false);
         setSubjectBeingEdited(null);
     };
 
-    const handleDeleteRow = (rowId, subject) => {
-        const shouldDelete = window.confirm(`Bạn có chắc muốn xóa "${subject}" không?`);
+    const handleDeleteRow = (rowId) => {
+        const row = normalizedSubjects.find((r) => r.id === rowId);
+        const shouldDelete = window.confirm(`Bạn có chắc muốn xóa "${row?.title || ''}" không?`);
 
-        if (shouldDelete) {
-            setRows((currentRows) => currentRows.filter((row) => row.id !== rowId));
-        }
-    };
+        if (!shouldDelete) return;
 
-    const handleUploadDocument = async ({ title, file }) => {
-        setUploadStatus({
-            loading: true,
-            error: '',
-            success: '',
-        });
-
-        try {
-            const result = await uploadDocument({ title, file });
-            setUploadStatus({
-                loading: false,
-                error: '',
-                success: result?.message || 'Tải lên thành công.',
-            });
-            return result;
-        } catch (uploadError) {
-            const message = uploadError instanceof Error ? uploadError.message : 'Tải tài liệu thất bại.';
-            setUploadStatus({
-                loading: false,
-                error: message,
-                success: '',
-            });
-            throw uploadError;
-        }
+        deleteSubject(rowId);
+        showToast('Xóa thành công!', 'success');
     };
 
     const handleUpdateSubject = ({ subjectCode, subjectName, description }) => {
@@ -162,25 +127,18 @@ export default function ListSubjects() {
             return;
         }
 
-        setRows((currentRows) => currentRows.map((row) => {
-            if (row.id !== subjectBeingEdited.id) {
-                return row;
-            }
-
-            return {
-                ...row,
-                name: subjectName || subjectCode || row.name,
-                subjectCode: subjectCode || row.subjectCode,
-                description,
-            };
-        }));
+        updateSubject(subjectBeingEdited.id, {
+            title: subjectName || subjectBeingEdited.title,
+            subjectCode: subjectCode || subjectBeingEdited.subjectCode,
+            description,
+        });
     };
 
     return (
         <div className="flex min-h-0 flex-1 flex-col">
             <div className="mt-2 flex items-center justify-between gap-6">
                 <h2 className="text-[18px] font-semibold leading-6 text-[#16151c]">
-                    120 môn học
+                    {`${normalizedSubjects.length} môn học`}
                 </h2>
 
                 <div className="flex items-center gap-6 pt-2">
@@ -196,32 +154,33 @@ export default function ListSubjects() {
                         </span>
                     </button>
 
-                    <button
-                        type="button"
-                        onClick={openAddSubjectModal}
-                        className="flex h-10 cursor-pointer items-center gap-2 rounded-full bg-[#7152f3] px-4 text-[16px] font-normal leading-6 text-white shadow-[4px_8px_24px_0_rgba(77,93,250,0.25)] transition-colors hover:bg-[#5a44d0]"
-                    >
-                        <span>Thêm</span>
-                        <PlusIcon />
-                    </button>
+                    <AddSubject />
                 </div>
             </div>
 
-            <div className="mt-5 grid grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)_96px] items-center border-b border-[#F3F4F6] pb-4 text-[14px] font-light leading-[22px] text-[#a2a1a8]">
+            <div className="mt-5 grid grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)_minmax(0,1fr)_80px] items-center border-b border-[#F3F4F6] pb-4 text-[14px] font-light leading-[22px] text-[#a2a1a8]">
+                <p>Mã môn học</p>
                 <p>Tên môn học</p>
-                <p>Số tài liệu đã tải</p>
+                <p>Số lượng file</p>
                 <p className="text-right">Action</p>
             </div>
 
             <div className="thin-scrollbar -mr-2 min-h-0 flex-1 overflow-y-auto pr-3">
                 <div className="divide-y divide-[#F3F4F6]">
+                    {visibleRows.length === 0 ? (
+                        <div className="py-8 text-center text-[14px] text-[#858494]">
+                            Chưa có môn học nào.
+                        </div>
+                    ) : null}
+
                     {visibleRows.map((row) => (
                         <RowItem
                             key={row.id}
-                            subject={row.name}
-                            documents={row.documents}
+                            subjectCode={row.subjectCode}
+                            title={row.title}
+                            fileCount={row.fileCount}
                             onClick={() => navigate(String(row.id), { state: row })}
-                            onDelete={() => handleDeleteRow(row.id, row.name)}
+                            onDelete={() => handleDeleteRow(row.id)}
                             onEdit={() => openEditSubjectModal(row)}
                         />
                     ))}
@@ -229,17 +188,14 @@ export default function ListSubjects() {
             </div>
 
             <div className="mt-8 border-t border-[#F3F4F6] pt-6">
-                <Pagination pageSize={10} totalItems={60} currentPage={1} totalPages={4} itemLabel="môn học" />
+                <Pagination
+                    pageSize={10}
+                    totalItems={normalizedSubjects.length}
+                    currentPage={1}
+                    totalPages={Math.max(1, Math.ceil(normalizedSubjects.length / 10))}
+                    itemLabel="môn học"
+                />
             </div>
-
-            <AddSubject
-                open={isAddSubjectOpen}
-                onClose={closeAddSubjectModal}
-                onSubmit={handleUploadDocument}
-                loading={uploadStatus.loading}
-                error={uploadStatus.error}
-                successMessage={uploadStatus.success}
-            />
 
             <EditSubject
                 open={isEditSubjectOpen}
@@ -247,6 +203,15 @@ export default function ListSubjects() {
                 onSubmit={handleUpdateSubject}
                 initialValues={subjectBeingEdited ?? undefined}
             />
+
+            {toast ? (
+                <div
+                    className={`fixed right-6 top-6 z-[90] rounded-xl px-4 py-3 text-[13px] font-medium shadow-[0_12px_30px_rgba(15,18,32,0.18)] ${toast.type === 'success' ? 'bg-[#ecfdf5] text-[#067647]' : 'bg-[#fef2f2] text-[#b42318]'}`}
+                    role="status"
+                >
+                    {toast.message}
+                </div>
+            ) : null}
         </div>
     );
 }

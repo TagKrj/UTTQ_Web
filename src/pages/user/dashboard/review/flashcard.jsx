@@ -10,8 +10,22 @@ import {
     createReviewSubject,
     getReviewSubjectById,
 } from '../../../../utils/reviewSubjects';
+import {
+    getOrCreateFlashcardSetByDocument,
+    normalizeFlashcardSet,
+} from '../../../../services/flashcardsService';
+import { useSubjects } from '../../../../contexts/SubjectsContext';
+import { recordReviewActivity } from '../../../../services/reviewActivityService';
 
 const FEEDBACK_DELAY_MS = 1500;
+
+function getExerciseDocumentId(exercise) {
+    return exercise?.documentId
+        ?? exercise?.document?.id
+        ?? exercise?.document?._id
+        ?? exercise?.document?.documentId
+        ?? exercise?.sourceDocumentId;
+}
 
 const FLASHCARDS = [
     {
@@ -152,7 +166,7 @@ function formatElapsedTime(totalSeconds) {
 }
 
 function getExpectedAnswerType(card) {
-    return card.isDefinitionCorrect ? 'correct' : 'wrong';
+    return card?.isDefinitionCorrect ? 'correct' : 'wrong';
 }
 
 function ScoreRing({ score }) {
@@ -250,6 +264,8 @@ export default function FlashcardReview() {
     const navigate = useNavigate();
     const startedAtRef = useRef(Date.now());
     const feedbackTimerRef = useRef(null);
+    const hasRecordedActivityRef = useRef(false);
+    const { updateExercise } = useSubjects();
 
     const { subject, exercise } = useMemo(() => {
         const stateSubject = location.state?.subject;
@@ -271,6 +287,12 @@ export default function FlashcardReview() {
         };
     }, [exerciseId, location.state?.exercise, location.state?.subject, subjectId]);
 
+    const documentId = getExerciseDocumentId(exercise);
+    const subjectTitle = subject.title ?? subject.name ?? 'Môn học';
+    const exerciseTitle = exercise?.title ?? 'Bài ôn tập';
+    const [flashcards, setFlashcards] = useState(FLASHCARDS);
+    const [isLoadingFlashcards, setIsLoadingFlashcards] = useState(true);
+    const [flashcardError, setFlashcardError] = useState('');
     const [currentCardIndex, setCurrentCardIndex] = useState(0);
     const [phase, setPhase] = useState('practice');
     const [selectedAnswer, setSelectedAnswer] = useState(null);
@@ -278,12 +300,63 @@ export default function FlashcardReview() {
     const [elapsedSeconds, setElapsedSeconds] = useState(0);
     const [frozenElapsedSeconds, setFrozenElapsedSeconds] = useState(null);
 
-    const activeCard = FLASHCARDS[currentCardIndex];
+    const activeCard = flashcards[currentCardIndex] ?? null;
     const answeredCount = cardResponses.filter(Boolean).length;
-    const progressPercent = FLASHCARDS.length > 0 ? Math.round((answeredCount / FLASHCARDS.length) * 100) : 0;
+    const progressPercent = flashcards.length > 0 ? Math.round((answeredCount / flashcards.length) * 100) : 0;
     const correctCount = cardResponses.filter((entry) => entry === 'correct').length;
     const wrongCount = cardResponses.filter((entry) => entry === 'wrong').length;
-    const score = FLASHCARDS.length > 0 ? (correctCount / FLASHCARDS.length) * 10 : 0;
+    const score = flashcards.length > 0 ? (correctCount / flashcards.length) * 10 : 0;
+
+    useEffect(() => {
+        let isMounted = true;
+
+        async function loadFlashcards() {
+            if (!documentId) {
+                setIsLoadingFlashcards(false);
+                setFlashcardError('Bài tập này chưa có mã tài liệu từ backend. Vui lòng tải lại file PDF để sinh flashcard.');
+                return;
+            }
+
+            setIsLoadingFlashcards(true);
+            setFlashcardError('');
+            setCurrentCardIndex(0);
+            setPhase('practice');
+            setSelectedAnswer(null);
+            setElapsedSeconds(0);
+            setFrozenElapsedSeconds(null);
+            startedAtRef.current = Date.now();
+            hasRecordedActivityRef.current = false;
+
+            try {
+                const payload = await getOrCreateFlashcardSetByDocument(documentId);
+                const normalizedSet = normalizeFlashcardSet(payload);
+
+                if (!isMounted) return;
+
+                if (normalizedSet.cards.length === 0) {
+                    throw new Error('Bộ flashcard chưa có thẻ nào.');
+                }
+
+                setFlashcards(normalizedSet.cards);
+                setCardResponses(Array(normalizedSet.cards.length).fill(null));
+            } catch (error) {
+                if (!isMounted) return;
+                setFlashcardError(error?.message || 'Không thể tải flashcard.');
+                setFlashcards([]);
+                setCardResponses([]);
+            } finally {
+                if (isMounted) {
+                    setIsLoadingFlashcards(false);
+                }
+            }
+        }
+
+        loadFlashcards();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [documentId]);
 
     useEffect(() => {
         if (phase === 'result') {
@@ -306,18 +379,18 @@ export default function FlashcardReview() {
     function goToNextCard() {
         setSelectedAnswer(null);
 
-        if (currentCardIndex >= FLASHCARDS.length - 1) {
+        if (currentCardIndex >= flashcards.length - 1) {
             setFrozenElapsedSeconds(Math.floor((Date.now() - startedAtRef.current) / 1000));
             setPhase('result');
             return;
         }
 
-        setCurrentCardIndex((currentIndex) => Math.min(FLASHCARDS.length - 1, currentIndex + 1));
+        setCurrentCardIndex((currentIndex) => Math.min(flashcards.length - 1, currentIndex + 1));
         setPhase('practice');
     }
 
     function handleRateCard(answerType) {
-        if (phase !== 'practice' || selectedAnswer) {
+        if (phase !== 'practice' || selectedAnswer || !activeCard) {
             return;
         }
 
@@ -347,10 +420,11 @@ export default function FlashcardReview() {
         }
 
         startedAtRef.current = Date.now();
+        hasRecordedActivityRef.current = false;
         setCurrentCardIndex(0);
         setPhase('practice');
         setSelectedAnswer(null);
-        setCardResponses(Array(FLASHCARDS.length).fill(null));
+        setCardResponses(Array(flashcards.length).fill(null));
         setElapsedSeconds(0);
         setFrozenElapsedSeconds(null);
     }
@@ -359,20 +433,61 @@ export default function FlashcardReview() {
         ? frozenElapsedSeconds ?? elapsedSeconds
         : elapsedSeconds;
 
+    useEffect(() => {
+        if (phase !== 'result' || hasRecordedActivityRef.current) {
+            return;
+        }
+
+        const durationSeconds = frozenElapsedSeconds
+            ?? Math.max(1, Math.floor((Date.now() - startedAtRef.current) / 1000));
+        const progress = flashcards.length > 0 ? Math.round((correctCount / flashcards.length) * 100) : 0;
+        hasRecordedActivityRef.current = true;
+
+        recordReviewActivity({
+            type: 'flashcard',
+            subjectId,
+            subjectTitle,
+            subjectCode: subject.subjectCode,
+            exerciseId,
+            exerciseTitle,
+            documentId,
+            startedAt: new Date(startedAtRef.current).toISOString(),
+            durationSeconds,
+            progress,
+            score,
+            correctCount,
+            wrongCount,
+            totalItems: flashcards.length,
+        });
+        updateExercise(subjectId, exerciseId, {
+            progress,
+            latestAttemptedAt: 'Hôm nay',
+        });
+    }, [
+        correctCount,
+        documentId,
+        exerciseId,
+        exerciseTitle,
+        flashcards.length,
+        frozenElapsedSeconds,
+        phase,
+        score,
+        subject.subjectCode,
+        subjectId,
+        subjectTitle,
+        updateExercise,
+        wrongCount,
+    ]);
+
     const isUserCorrect = selectedAnswer === getExpectedAnswerType(activeCard);
-    const isDefinitionCorrect = activeCard.isDefinitionCorrect ?? true;
+    const isDefinitionCorrect = activeCard?.isDefinitionCorrect ?? true;
 
     return (
         <div className="flex min-h-0 flex-1 flex-col pb-2">
             <div className="mt-4 flex min-w-0 items-center gap-3">
                 <button
                     type="button"
-                    onClick={() => navigate(`/review/${subject.id}/choose-method/${exercise.id}`, {
-                        state: {
-                            subject,
-                            exercise,
-                        },
-                    })}
+                    onClick={() => navigate(-1)}
                     className="flex h-7 w-7 shrink-0 items-center justify-center text-[#212121] transition-opacity hover:opacity-75 cursor-pointer"
                     aria-label="Quay lại màn chọn phương pháp"
                 >
@@ -380,13 +495,25 @@ export default function FlashcardReview() {
                 </button>
 
                 <div className="flex min-w-0 items-center gap-3 text-[18px] font-semibold leading-[1.2] text-[#212121]">
-                    <span className="truncate">{subject.name}</span>
+                    <span className="truncate">{subjectTitle}</span>
                     <span className="shrink-0 text-[#6A5AE0]">•</span>
-                    <span className="truncate font-semibold">{exercise.title}</span>
+                    <span className="truncate font-semibold">{exerciseTitle}</span>
                 </div>
             </div>
 
-            {phase !== 'result' ? (
+            {isLoadingFlashcards ? (
+                <div className="mt-8 rounded-[18px] bg-[#f7f7ff] px-5 py-6 text-[14px] text-[#858494]">
+                    Đang tải flashcard...
+                </div>
+            ) : flashcardError ? (
+                <div className="mt-8 rounded-[18px] bg-[#fef2f2] px-5 py-6 text-[14px] text-[#b42318]">
+                    {flashcardError}
+                </div>
+            ) : !activeCard ? (
+                <div className="mt-8 rounded-[18px] bg-[#f7f7ff] px-5 py-6 text-[14px] text-[#858494]">
+                    Bộ flashcard chưa có thẻ nào.
+                </div>
+            ) : phase !== 'result' ? (
                 <div className="flex min-h-0 flex-1 flex-col pb-2">
                     <div className="mt-5 flex items-center justify-between gap-4">
                         <h1 className="text-[20px] font-semibold leading-[1.2] text-[#6A5AE0]">
@@ -434,7 +561,7 @@ export default function FlashcardReview() {
 
                     <div className="mt-2 flex items-center justify-end">
                         <p className="text-[15px] font-semibold leading-6 text-[#f75555]">
-                            {currentCardIndex + 1}/{FLASHCARDS.length}
+                            {currentCardIndex + 1}/{flashcards.length}
                         </p>
                     </div>
 
@@ -506,7 +633,7 @@ export default function FlashcardReview() {
                                 Bạn đã trả lời đúng
                             </p>
                             <p className="mt-1 text-[20px] font-semibold leading-7 text-[#6A5AE0]">
-                                {correctCount}/{FLASHCARDS.length} câu
+                                {correctCount}/{flashcards.length} câu
                             </p>
                         </div>
 
@@ -527,7 +654,7 @@ export default function FlashcardReview() {
                     </div>
 
                     <div className="sr-only">
-                        Đã trả lời đúng {correctCount} trên {FLASHCARDS.length} câu. Đã trả lời sai {wrongCount} câu.
+                        Đã trả lời đúng {correctCount} trên {flashcards.length} câu. Đã trả lời sai {wrongCount} câu.
                     </div>
                 </div>
             )}
