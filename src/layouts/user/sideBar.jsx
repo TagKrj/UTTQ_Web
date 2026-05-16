@@ -62,7 +62,11 @@ function ThemeToggleItem({ icon: Icon, label, active, isDark, onClick }) {
     );
 }
 
-export default function SideBar() {
+function joinClassNames(...classes) {
+    return classes.filter(Boolean).join(' ');
+}
+
+export default function SideBar({ className = '', onNavigate }) {
     const location = useLocation();
     const navigate = useNavigate();
     const { theme, isDark, setTheme } = useTheme();
@@ -72,10 +76,11 @@ export default function SideBar() {
 
     const handleMenuClick = (label) => {
         navigate(MENU_PATH_MAP[label] ?? '/statistical');
+        onNavigate?.();
     };
 
     return (
-        <aside className="app-sidebar relative h-full w-[280px] shrink-0 overflow-hidden rounded-[20px] bg-[#EDEFFF] transition-colors duration-300">
+        <aside className={joinClassNames('app-sidebar relative h-full w-[280px] shrink-0 overflow-hidden rounded-[20px] bg-[#EDEFFF] transition-colors duration-300', className)}>
             <div className="absolute left-[30px] top-[31px] flex w-[140px] items-center justify-between">
                 <img src={Logo2} alt="UTTQ" className="h-[38px] w-[38px] shrink-0" />
                 <span

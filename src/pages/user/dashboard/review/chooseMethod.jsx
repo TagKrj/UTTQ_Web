@@ -39,7 +39,7 @@ const METHOD_CARDS = [
     {
         key: 'flashcard',
         title: 'Flashcard',
-        subtitle: 'Quẹt trái khi sai, quẹt phải khi đúng',
+        subtitle: 'Ghi nhớ nhanh bằng mặt trước và mặt sau',
         buttonLabel: 'Luyện tập',
         imageSrc: FlashcardImage,
         imageAlt: 'Flashcard',
@@ -47,6 +47,19 @@ const METHOD_CARDS = [
         titleClass: 'text-[#6A5AE0]',
         subtitleClass: 'text-[#212121]/50',
         buttonClass: 'border-[#6A5AE0] bg-[#6A5AE0] text-white',
+        imageWrapperClass: 'h-[163px]',
+    },
+    {
+        key: 'true-false',
+        title: 'Đúng / Sai',
+        subtitle: 'Xác định nhận định đúng hay sai từ tài liệu',
+        buttonLabel: 'Bắt đầu',
+        imageSrc: FlashcardImage,
+        imageAlt: 'Đúng sai',
+        cardClass: 'bg-[#e8fbf4]',
+        titleClass: 'text-[#047857]',
+        subtitleClass: 'text-[#212121]/55',
+        buttonClass: 'border-[#047857] bg-[#047857] text-white',
         imageWrapperClass: 'h-[163px]',
     },
 ];
@@ -126,8 +139,17 @@ export default function ChooseMethod() {
                         state: {
                             subject,
                             exercise,
+                            reviewMode: 'flashcard',
                         },
                     })
+                    : card.key === 'true-false'
+                        ? () => navigate('true-false', {
+                            state: {
+                                subject,
+                                exercise,
+                                reviewMode: 'true-false',
+                            },
+                        })
                     : undefined,
     }));
 
@@ -165,7 +187,7 @@ export default function ChooseMethod() {
                 </h1>
             </div>
 
-            <div className="mt-5 grid gap-4 lg:grid-cols-3">
+            <div className="mt-5 grid gap-4 lg:grid-cols-4">
                 {methodCards.map((card) => (
                     <MethodCard key={card.key} card={card} />
                 ))}

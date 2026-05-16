@@ -17,14 +17,24 @@ export default function Login() {
     const [rememberMe, setRememberMe] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [focusedField, setFocusedField] = useState('');
+    const [isCompletingLogin, setIsCompletingLogin] = useState(false);
 
     const handleLogin = async (e) => {
         e.preventDefault();
 
         try {
-            await login({ email, password }, { rememberMe });
-            navigate('/', { replace: true });
+            const auth = await login({ email, password }, { rememberMe });
+            setIsCompletingLogin(true);
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+            navigate('/', {
+                replace: true,
+                state: {
+                    loginSuccess: true,
+                    displayName: auth.user?.fullName,
+                },
+            });
         } catch {
+            setIsCompletingLogin(false);
             // Error is exposed by the auth hook.
         }
     };
@@ -41,7 +51,23 @@ export default function Login() {
     const passwordIconColor = hasPasswordText ? '#212121' : isPasswordFocused ? '#6A5AE0' : '#9E9E9E';
 
     return (
-        <div className="w-full max-w-[435px] flex flex-col gap-10">
+        <div className="relative w-full max-w-[435px] flex flex-col gap-10">
+            {isCompletingLogin ? (
+                <div className="fixed inset-0 z-[120] flex items-center justify-center bg-[#151225]/45 px-5 backdrop-blur-sm">
+                    <div
+                        role="status"
+                        aria-live="polite"
+                        className="w-full max-w-[360px] rounded-[24px] bg-white px-7 py-8 text-center shadow-[0_24px_80px_rgba(17,12,46,0.26)]"
+                    >
+                        <span className="mx-auto block h-12 w-12 animate-spin rounded-full border-4 border-[#edeafe] border-t-[#6A5AE0]" />
+                        <p className="mt-5 text-[18px] font-semibold text-[#212121]">Đang đăng nhập</p>
+                        <p className="mt-2 text-[14px] leading-6 text-[#858494]">
+                            Đang đưa bạn vào trang chủ...
+                        </p>
+                    </div>
+                </div>
+            ) : null}
+
             <div className="flex justify-center">
                 <h1 className="text-4xl lg:text-5xl font-medium text-gray-900 text-center">Đăng nhập</h1>
             </div>
@@ -118,10 +144,11 @@ export default function Login() {
 
                 <button
                     type="submit"
-                    disabled={loading}
+                    disabled={loading || isCompletingLogin}
+                    aria-busy={loading || isCompletingLogin}
                     className="w-full bg-[#6A5AE0] text-white font-normal py-4 px-4 rounded-full hover:bg-[#5a4ad0] transition-colors shadow-[4px_8px_24px_0_rgba(77,93,250,0.25)] cursor-pointer"
                 >
-                    {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
+                    {loading || isCompletingLogin ? 'Đang đăng nhập...' : 'Đăng nhập'}
                 </button>
 
                 {error ? (

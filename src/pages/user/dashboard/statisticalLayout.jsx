@@ -18,9 +18,9 @@ export default function StatisticalLayout() {
     }), []);
 
     return (
-        <div className="flex h-full w-full justify-center overflow-auto bg-white rounded-[20px] border border-[#E5E7EB] px-6 py-6 thin-scrollbar">
-            <div className="flex w-full flex-col gap-6">
-                <div className="flex flex-row justify-center gap-[15px]">
+        <div className="flex h-full w-full justify-center overflow-auto rounded-[20px] border border-[#E5E7EB] bg-white px-3 py-4 thin-scrollbar sm:px-6 sm:py-6">
+            <div className="flex w-full flex-col gap-4 sm:gap-6">
+                <div className="flex flex-col justify-center gap-4 xl:flex-row xl:gap-[15px]">
                     <ReviewResultsStats />
                     <ReviewSubjectPieChartCard
                         onPeriodChange={setSelectedPeriod}
@@ -29,7 +29,7 @@ export default function StatisticalLayout() {
                     />
                 </div>
 
-                <div className="flex flex-row justify-center gap-[15px]">
+                <div className="flex flex-col justify-center gap-4 xl:flex-row xl:gap-[15px]">
                     <ReviewTimeStats />
                     <ReviewSubjectDetailList items={activePeriod.subjects} />
                 </div>

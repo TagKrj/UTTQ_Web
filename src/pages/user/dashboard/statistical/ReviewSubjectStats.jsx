@@ -73,11 +73,11 @@ function LegendItem({ item, onMouseEnter, onFocus, onBlur }) {
 
 function SubjectDetailCard({ item }) {
     return (
-        <div className="h-[76px] py-10 overflow-clip rounded-[20px] border-[1.5px] border-solid bg-white" style={{ borderColor: item.borderColor }}>
+        <div className="min-h-[76px] overflow-clip rounded-[20px] border-[1.5px] border-solid bg-white py-4 sm:h-[76px] sm:py-10" style={{ borderColor: item.borderColor }}>
             <div className="flex h-full items-center justify-between px-[18px]">
                 <div className="flex h-[58px] w-full flex-col justify-between">
                     <div className="flex h-6 items-center justify-between gap-3">
-                        <p className="w-[303px] text-[15px] font-semibold leading-normal text-[#0c092a]">{item.name}</p>
+                        <p className="min-w-0 flex-1 truncate text-[15px] font-semibold leading-normal text-[#0c092a]">{item.name}</p>
                         <p className="w-9 text-center text-[13px] font-medium leading-[1.2]" style={{ color: item.color }}>
                             {item.percent}
                         </p>
@@ -208,8 +208,8 @@ export function ReviewSubjectPieChartCard({ periodData, selectedPeriod, onPeriod
     };
 
     return (
-        <div className="h-[435px] w-full max-w-[478px] rounded-[20px] bg-white px-8 pb-8 pt-3 shadow-[0_0_16px_rgba(0,0,0,0.06)]">
-            <div className="flex items-center gap-3">
+        <div className="h-auto min-h-[435px] w-full max-w-none rounded-[20px] bg-white px-4 pb-6 pt-4 shadow-[0_0_16px_rgba(0,0,0,0.06)] sm:max-w-[478px] sm:px-8 sm:pb-8 sm:pt-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                 <h2 className="flex-1 text-[20px] font-bold leading-tight tracking-[-0.01em] text-[#343a40]">
                     Thống kê môn học đã ôn tập
                 </h2>
@@ -264,7 +264,7 @@ export function ReviewSubjectPieChartCard({ periodData, selectedPeriod, onPeriod
             </div>
 
             <div className="mt-8 flex flex-col gap-4" onMouseLeave={() => setIsTooltipVisible(false)}>
-                <div className="flex items-center justify-between gap-4">
+                <div className="flex flex-wrap items-center justify-center gap-4 sm:justify-between">
                     {legendRows[0].map((item, index) => (
                         <LegendItem
                             key={item.name}
@@ -280,7 +280,7 @@ export function ReviewSubjectPieChartCard({ periodData, selectedPeriod, onPeriod
                     ))}
                 </div>
 
-                <div className="flex items-center justify-start gap-11">
+                <div className="flex flex-wrap items-center justify-center gap-4 sm:justify-start sm:gap-11">
                     {legendRows[1].map((item, index) => (
                         <LegendItem
                             key={item.name}
@@ -304,7 +304,7 @@ export function ReviewSubjectDetailList({ items }) {
     const shouldScroll = items.length > 5;
 
     return (
-        <div className="h-[368px] max-w-[478px] w-full">
+        <div className="h-auto min-h-[368px] w-full max-w-none sm:max-w-[478px]">
             <h3 className="text-[20px] font-semibold leading-[1.2] text-[#212121]">Chi tiết từng môn học</h3>
 
             <div className={`mt-[13px] flex flex-col gap-2.5 ${shouldScroll ? 'max-h-[390px] overflow-y-auto pr-1 thin-scrollbar' : ''}`}>

@@ -104,10 +104,10 @@ export default function Setting() {
     };
 
     return (
-        <div className="thin-scrollbar flex h-full w-full flex-col overflow-auto rounded-[20px] border border-[#E5E7EB] bg-white px-8 py-7 shadow-[0_0_8px_rgba(0,0,0,0.05)]">
+        <div className="thin-scrollbar flex h-full w-full flex-col overflow-auto rounded-[20px] border border-[#E5E7EB] bg-white px-4 py-5 shadow-[0_0_8px_rgba(0,0,0,0.05)] sm:px-8 sm:py-7">
             <div className="flex flex-wrap items-start justify-between gap-5">
                 <div>
-                    <h1 className="text-[28px] font-semibold leading-tight text-[#212121]">Cài đặt</h1>
+                    <h1 className="text-[24px] font-semibold leading-tight text-[#212121] sm:text-[28px]">Cài đặt</h1>
                     <p className="mt-2 text-[14px] leading-6 text-[#858494]">
                         Điều chỉnh giao diện và hành vi ôn tập. Theme hiện tại: <span className="font-semibold text-[#7152f3]">{activeThemeLabel}</span>.
                     </p>

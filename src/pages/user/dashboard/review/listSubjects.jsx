@@ -31,7 +31,7 @@ function ActionButton({ icon, label, onClick }) {
 function RowItem({ subjectCode, title, fileCount, onClick, onDelete, onEdit }) {
     return (
         <div
-            className="grid cursor-pointer grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)_minmax(0,1fr)_80px] items-center rounded-[10px] border-b border-[#F3F4F6] py-5 transition-colors hover:bg-[#EDEFFF] last:border-b-0"
+            className="grid cursor-pointer grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1 rounded-[14px] border border-[#F3F4F6] bg-white p-4 transition-colors hover:bg-[#EDEFFF] sm:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)_minmax(0,1fr)_80px] sm:items-center sm:rounded-[10px] sm:border-x-0 sm:border-t-0 sm:bg-transparent sm:px-0 sm:py-5 sm:last:border-b-0"
             onClick={onClick}
             onKeyDown={(event) => {
                 if (event.key === 'Enter' || event.key === ' ') {
@@ -48,19 +48,19 @@ function RowItem({ subjectCode, title, fileCount, onClick, onDelete, onEdit }) {
                 </p>
             </div>
 
-            <div className="min-w-0">
-                <p className="truncate text-[14px] font-light leading-6 text-[#16151c]">
+            <div className="min-w-0 sm:col-auto">
+                <p className="truncate text-[14px] font-semibold leading-6 text-[#16151c] sm:font-light">
                     {title || '-'}
                 </p>
             </div>
 
             <div className="min-w-0">
-                <p className="truncate text-[14px] font-light leading-6 text-[#16151c]">
-                    {fileCount}
+                <p className="truncate text-[13px] font-light leading-6 text-[#858494] sm:text-[14px] sm:text-[#16151c]">
+                    {fileCount} file
                 </p>
             </div>
 
-            <div className="flex items-center justify-end gap-4">
+            <div className="row-span-3 flex items-center justify-end gap-3 sm:row-span-1 sm:gap-4">
                 <ActionButton icon={EditIcon} label="Chỉnh sửa" onClick={onEdit} />
                 <ActionButton icon={RemoveIcon} label="Xóa" onClick={onDelete} />
             </div>
@@ -136,12 +136,12 @@ export default function ListSubjects() {
 
     return (
         <div className="flex min-h-0 flex-1 flex-col">
-            <div className="mt-2 flex items-center justify-between gap-6">
+            <div className="mt-2 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
                 <h2 className="text-[18px] font-semibold leading-6 text-[#16151c]">
                     {`${normalizedSubjects.length} môn học`}
                 </h2>
 
-                <div className="flex items-center gap-6 pt-2">
+                <div className="flex flex-wrap items-center gap-4 pt-2 sm:gap-6">
                     <button
                         type="button"
                         onClick={() => setSortOrder((currentOrder) => (currentOrder === 'newest' ? 'oldest' : 'newest'))}
@@ -158,15 +158,15 @@ export default function ListSubjects() {
                 </div>
             </div>
 
-            <div className="mt-5 grid grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)_minmax(0,1fr)_80px] items-center border-b border-[#F3F4F6] pb-4 text-[14px] font-light leading-[22px] text-[#a2a1a8]">
+            <div className="mt-5 hidden grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)_minmax(0,1fr)_80px] items-center border-b border-[#F3F4F6] pb-4 text-[14px] font-light leading-[22px] text-[#a2a1a8] sm:grid">
                 <p>Mã môn học</p>
                 <p>Tên môn học</p>
                 <p>Số lượng file</p>
                 <p className="text-right">Action</p>
             </div>
 
-            <div className="thin-scrollbar -mr-2 min-h-0 flex-1 overflow-y-auto pr-3">
-                <div className="divide-y divide-[#F3F4F6]">
+            <div className="thin-scrollbar -mr-2 mt-4 min-h-0 flex-1 overflow-y-auto pr-2 sm:mt-0 sm:pr-3">
+                <div className="grid gap-3 sm:block sm:divide-y sm:divide-[#F3F4F6]">
                     {visibleRows.length === 0 ? (
                         <div className="py-8 text-center text-[14px] text-[#858494]">
                             Chưa có môn học nào.
@@ -206,7 +206,7 @@ export default function ListSubjects() {
 
             {toast ? (
                 <div
-                    className={`fixed right-6 top-6 z-[90] rounded-xl px-4 py-3 text-[13px] font-medium shadow-[0_12px_30px_rgba(15,18,32,0.18)] ${toast.type === 'success' ? 'bg-[#ecfdf5] text-[#067647]' : 'bg-[#fef2f2] text-[#b42318]'}`}
+                    className={`fixed left-4 right-4 top-4 z-[90] rounded-xl px-4 py-3 text-[13px] font-medium shadow-[0_12px_30px_rgba(15,18,32,0.18)] sm:left-auto sm:right-6 sm:top-6 ${toast.type === 'success' ? 'bg-[#ecfdf5] text-[#067647]' : 'bg-[#fef2f2] text-[#b42318]'}`}
                     role="status"
                 >
                     {toast.message}

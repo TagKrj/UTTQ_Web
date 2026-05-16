@@ -3,7 +3,7 @@ import { getStoredAuth, updateStoredAuthUser } from './authService';
 
 const AVATAR_STORAGE_KEY = 'uttq.user.avatars.v1';
 const AVATAR_EVENT = 'uttq:avatar-updated';
-const MAX_AVATAR_SIZE_BYTES = 1.5 * 1024 * 1024;
+const MAX_AVATAR_SIZE_BYTES = 5 * 1024 * 1024;
 
 function isClient() {
     return typeof window !== 'undefined';
@@ -103,7 +103,7 @@ export async function saveAvatarFile(user, file) {
     }
 
     if (file.size > MAX_AVATAR_SIZE_BYTES) {
-        throw new Error('Ảnh avatar tối đa 1.5MB.');
+        throw new Error('Ảnh avatar tối đa 5MB.');
     }
 
     const avatarDataUrl = await readFileAsDataUrl(file);

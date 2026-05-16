@@ -66,7 +66,7 @@ function ExerciseCard({ exercise, onClick }) {
 
     return (
         <div
-            className={`flex h-[76px] min-h-[76px] flex-none shrink-0 cursor-pointer items-center overflow-hidden rounded-[20px] border-[1.5px] px-[30px] transition-shadow hover:shadow-[2px_4px_12px_0_rgba(162,161,168,0.2)] ${tone.cardClass}`}
+            className={`flex min-h-[76px] flex-none shrink-0 cursor-pointer items-center overflow-hidden rounded-[20px] border-[1.5px] px-4 py-3 transition-shadow hover:shadow-[2px_4px_12px_0_rgba(162,161,168,0.2)] sm:h-[76px] sm:px-[30px] sm:py-0 ${tone.cardClass}`}
             onClick={onClick}
             onKeyDown={(event) => {
                 if (event.key === 'Enter' || event.key === ' ') {
@@ -231,7 +231,7 @@ export default function DetailSubject() {
 
     return (
         <div className="flex min-h-0 flex-1 flex-col">
-            <div className="mt-4 flex items-center justify-between gap-6">
+            <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
                 <button
                     type="button"
                     onClick={() => navigate(-1)}
@@ -246,7 +246,7 @@ export default function DetailSubject() {
                 <button
                     type="button"
                     onClick={() => setIsAddExerciseOpen(true)}
-                    className="flex h-9 w-[111px] cursor-pointer items-center justify-center gap-2 rounded-full bg-[#6949ff] px-4 text-[15px] font-normal leading-[1.4] tracking-[0.2px] text-white shadow-[4px_8px_24px_0_rgba(77,93,250,0.25)]"
+                    className="flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-[#6949ff] px-4 text-[15px] font-normal leading-[1.4] tracking-[0.2px] text-white shadow-[4px_8px_24px_0_rgba(77,93,250,0.25)] sm:h-9 sm:w-[111px]"
                 >
                     <span>Thêm</span>
                     <img src={AddCircleIcon} alt="" aria-hidden="true" className="h-5 w-5 shrink-0" />
@@ -265,8 +265,8 @@ export default function DetailSubject() {
                 </div>
             ) : null}
 
-            <div className="mt-5 flex min-h-0 flex-1 items-start justify-between gap-[30px]">
-                <div className="flex w-[243px] shrink-0 flex-col gap-5">
+            <div className="mt-5 flex min-h-0 flex-1 flex-col items-stretch gap-5 lg:flex-row lg:items-start lg:justify-between lg:gap-[30px]">
+                <div className="flex w-full shrink-0 flex-col gap-4 lg:w-[243px] lg:gap-5">
                     <div className="flex h-[177px] flex-col justify-between rounded-[10px] bg-[#7152f3] p-5">
                         <MetricItem icon={StarWhiteIcon} label="Chưa xong: " value={subject.unfinishedCount ?? 0} />
                         <MetricItem icon={CalendarCheckIcon} label="Hoàn Thành: " value={subject.completedCount ?? 0} />
@@ -278,7 +278,7 @@ export default function DetailSubject() {
                     </p>
                 </div>
 
-                <div className="flex min-w-0 flex-1 flex-col gap-5">
+                <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-5">
                     <h2 className="text-[18px] font-semibold leading-[1.2] text-[#212121]">
                         Danh sách bài tập
                     </h2>

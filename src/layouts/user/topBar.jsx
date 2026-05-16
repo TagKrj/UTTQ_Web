@@ -24,11 +24,19 @@ function SearchIcon({ color }) {
     );
 }
 
+function MenuIcon() {
+    return (
+        <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5" fill="none">
+            <path d="M4 7H20M4 12H20M4 17H20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        </svg>
+    );
+}
+
 function getGreetingPeriod(hour) {
     return hour < 12 ? 'sáng' : 'tối';
 }
 
-export default function TopBar() {
+export default function TopBar({ onMenuClick }) {
     const navigate = useNavigate();
     const { user } = useAuth();
     const searchRef = useRef(null);
@@ -108,18 +116,29 @@ export default function TopBar() {
     };
 
     return (
-        <div className="flex w-full flex-col gap-4 lg:flex-row lg:items-center lg:justify-between py-3">
-            <div className="min-w-0">
-                <p className="text-[20px] font-semibold leading-[1.2] text-[#212121]">
-                    Xin chào {displayName} 👋🏻
-                </p>
-                <p className="mt-1 text-[13px] font-normal leading-5 text-[#99A1AF]">
-                    Xin chào buổi {greetingPeriod}
-                </p>
+        <div className="flex w-full flex-col gap-3 py-2 sm:gap-4 sm:py-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex min-w-0 items-center gap-3">
+                <button
+                    type="button"
+                    aria-label="Mở menu"
+                    onClick={onMenuClick}
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[rgba(162,161,168,0.1)] text-[#212121] transition-colors hover:bg-[rgba(162,161,168,0.2)] lg:hidden"
+                >
+                    <MenuIcon />
+                </button>
+
+                <div className="min-w-0">
+                    <p className="truncate text-[18px] font-semibold leading-[1.2] text-[#212121] sm:text-[20px]">
+                        Xin chào {displayName}
+                    </p>
+                    <p className="mt-1 truncate text-[13px] font-normal leading-5 text-[#99A1AF]">
+                        Xin chào buổi {greetingPeriod}
+                    </p>
+                </div>
             </div>
 
-            <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center lg:w-auto lg:justify-end">
-                <div ref={searchRef} className="relative w-full sm:max-w-[261px] lg:w-[261px]">
+            <div className="grid w-full grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3 lg:flex lg:w-auto lg:justify-end">
+                <div ref={searchRef} className="relative min-w-0 lg:w-[261px]">
                     <label
                         className={`flex h-[46px] w-full min-w-0 items-center gap-3 rounded-[10px] border-[1.5px] px-4 transition-colors duration-200 ${isSearchFocused ? 'border-[#6A5AE0] bg-[rgba(106,90,224,0.08)]' : 'border-[rgba(162,161,168,0.1)] bg-white'}`}
                     >
@@ -135,7 +154,7 @@ export default function TopBar() {
                         />
                     </label>
                     {isSearchFocused && hasSearchText ? (
-                        <div className="absolute right-0 top-[calc(100%+12px)] z-[80] w-[360px] max-w-[calc(100vw-40px)] overflow-hidden rounded-2xl border border-[#efeefc] bg-white shadow-[0_20px_60px_rgba(17,12,46,0.16)]">
+                        <div className="absolute left-0 right-0 top-[calc(100%+12px)] z-[80] overflow-hidden rounded-2xl border border-[#efeefc] bg-white shadow-[0_20px_60px_rgba(17,12,46,0.16)] sm:left-auto sm:w-[360px] sm:max-w-[calc(100vw-40px)]">
                             {searchResults.length === 0 ? (
                                 <div className="px-4 py-5 text-[14px] text-[#858494]">
                                     Không tìm thấy kết quả phù hợp.
@@ -177,7 +196,7 @@ export default function TopBar() {
                     </button>
 
                     {isNotificationOpen ? (
-                        <div className="absolute right-0 top-[calc(100%+12px)] z-[80] w-[380px] overflow-hidden rounded-2xl border border-[#efeefc] bg-white shadow-[0_20px_60px_rgba(17,12,46,0.16)]">
+                        <div className="fixed left-4 right-4 top-[138px] z-[80] overflow-hidden rounded-2xl border border-[#efeefc] bg-white shadow-[0_20px_60px_rgba(17,12,46,0.16)] sm:absolute sm:left-auto sm:right-0 sm:top-[calc(100%+12px)] sm:w-[380px]">
                             <div className="flex items-center justify-between border-b border-[#F3F4F6] px-4 py-3">
                                 <div>
                                     <p className="text-[15px] font-semibold text-[#212121]">Thông báo</p>

@@ -87,86 +87,6 @@ function isFailed(payload) {
     return getStatus(payload) === 'failed';
 }
 
-function normalizeBoolean(value) {
-    if (typeof value === 'boolean') return value;
-
-    if (typeof value === 'string') {
-        const normalizedValue = value.toLowerCase().trim();
-
-        if (normalizedValue === 'true') return true;
-        if (normalizedValue === 'false') return false;
-    }
-
-    return undefined;
-}
-
-function shuffleItems(items) {
-    const shuffledItems = [...items];
-
-    for (let index = shuffledItems.length - 1; index > 0; index -= 1) {
-        const randomIndex = Math.floor(Math.random() * (index + 1));
-        [shuffledItems[index], shuffledItems[randomIndex]] = [shuffledItems[randomIndex], shuffledItems[index]];
-    }
-
-    return shuffledItems;
-}
-
-function pickDifferentAnswer(cards, currentIndex) {
-    const currentAnswer = cards[currentIndex]?.answer;
-    const answerCandidates = cards.filter((card, index) => index !== currentIndex && card.answer !== currentAnswer);
-
-    if (answerCandidates.length === 0) {
-        return currentAnswer;
-    }
-
-    const randomCandidate = answerCandidates[Math.floor(Math.random() * answerCandidates.length)];
-    return randomCandidate.answer;
-}
-
-function removeInternalCardFields(card) {
-    const cleanedCard = { ...card };
-    delete cleanedCard.hasExplicitCorrectness;
-    return cleanedCard;
-}
-
-function buildTrueFalseCards(cards) {
-    if (cards.some((card) => card.hasExplicitCorrectness)) {
-        return cards.map((card) => ({
-            ...removeInternalCardFields(card),
-            isDefinitionCorrect: card.isDefinitionCorrect ?? true,
-        }));
-    }
-
-    if (cards.length < 2) {
-        return cards.map((card) => ({
-            ...removeInternalCardFields(card),
-            isDefinitionCorrect: true,
-        }));
-    }
-
-    const falseCardCount = Math.max(1, Math.round(cards.length * 0.45));
-    const falseIndexes = new Set(
-        shuffleItems(cards.map((_, index) => index)).slice(0, falseCardCount),
-    );
-
-    return cards.map((card, index) => {
-        const cleanedCard = removeInternalCardFields(card);
-
-        if (!falseIndexes.has(index)) {
-            return {
-                ...cleanedCard,
-                isDefinitionCorrect: true,
-            };
-        }
-
-        return {
-            ...cleanedCard,
-            answer: pickDifferentAnswer(cards, index),
-            isDefinitionCorrect: false,
-        };
-    });
-}
-
 async function fetchUsableSet(set, { token } = {}) {
     const setId = getFirstId(set);
 
@@ -262,26 +182,18 @@ export function normalizeFlashcardSet(rawSet) {
     const rawCards = getArrayPayload(source, ['flashcards', 'cards', 'items']);
 
     const cards = rawCards
-        .map((card, index) => {
-            const explicitCorrectness = normalizeBoolean(
-                card?.isDefinitionCorrect ?? card?.isCorrect ?? card?.correct,
-            );
-
-            return {
-                id: String(card?.id ?? card?._id ?? card?.flashcardId ?? index + 1),
-                badge: card?.badge ?? card?.type ?? 'ĐÚNG / SAI',
-                prompt: card?.front ?? card?.prompt ?? card?.question ?? card?.term ?? '',
-                answer: card?.back ?? card?.answer ?? card?.definition ?? card?.content ?? '',
-                isDefinitionCorrect: explicitCorrectness,
-                hasExplicitCorrectness: explicitCorrectness !== undefined,
-            };
-        })
+        .map((card, index) => ({
+            id: String(card?.id ?? card?._id ?? card?.flashcardId ?? index + 1),
+            badge: card?.badge ?? card?.type ?? 'FLASHCARD',
+            prompt: card?.front ?? card?.prompt ?? card?.question ?? card?.term ?? '',
+            answer: card?.back ?? card?.answer ?? card?.definition ?? card?.content ?? '',
+        }))
         .filter((card) => card.prompt && card.answer);
 
     return {
         id: String(getFirstId(source) ?? ''),
         title: source?.title ?? source?.name ?? 'Bộ flashcard',
         status: source?.status ?? '',
-        cards: buildTrueFalseCards(cards),
+        cards,
     };
 }

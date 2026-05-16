@@ -50,6 +50,10 @@ export const reviewRoutes = [
                         path: ':subjectId/choose-method/:exerciseId/flashcard',
                         element: <FlashcardReview />,
                     },
+                    {
+                        path: ':subjectId/choose-method/:exerciseId/true-false',
+                        element: <FlashcardReview />,
+                    },
                 ],
             },
         ],

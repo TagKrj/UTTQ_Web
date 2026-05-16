@@ -35,12 +35,28 @@
 
 * {
     font-family: 'Lexend', sans-serif;
+    box-sizing: border-box;
 }
 
+html,
 body {
     font-family: 'Zen Maru Gothic', sans-serif;
     background: var(--app-bg);
     color: var(--app-text);
+    min-width: 0;
+    overflow: hidden;
+}
+
+#root {
+    min-height: 100dvh;
+    min-width: 0;
+}
+
+img,
+svg,
+video,
+canvas {
+    max-width: 100%;
 }
 
 [data-theme='dark'] .app-shell,

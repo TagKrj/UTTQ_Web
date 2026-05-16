@@ -45,6 +45,12 @@ export const API_ENDPOINTS = {
     DETAIL: (id) => `${API_BASE_URL}/api/flashcard-sets/${id}`,
   },
 
+  // ==================== TRUE/FALSE ====================
+  TRUE_FALSE: {
+    GENERATE: (documentId) => `${API_BASE_URL}/api/true-false/generate/${documentId}`,
+    LIST: (documentId) => `${API_BASE_URL}/api/true-false?documentId=${documentId}`,
+  },
+
 
 };
 

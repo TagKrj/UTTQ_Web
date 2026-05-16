@@ -168,10 +168,10 @@ export default function ReviewTimeStats() {
 
     return (
         <div
-            className={`justify-self-start flex h-[427px] w-full max-w-[878px] flex-col justify-between overflow-visible rounded-[20px] bg-white px-[17px] py-[27px] shadow-[-1px_1px_14.9px_9px_rgba(0,0,0,0.03)] ${activePeriod.alignItemsClassName}`}
+            className={`justify-self-start flex h-auto min-h-[427px] w-full max-w-none flex-col justify-between overflow-visible rounded-[20px] bg-white px-4 py-6 shadow-[-1px_1px_14.9px_9px_rgba(0,0,0,0.03)] sm:max-w-[878px] sm:px-[17px] sm:py-[27px] ${activePeriod.alignItemsClassName}`}
         // style={{ width: `${TIME_STATS_CARD_WIDTH}px` }}
         >
-            <div className="flex h-8 items-center justify-between w-full max-w-[844px]">
+            <div className="flex min-h-8 w-full max-w-[844px] flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <h2 className={activePeriod.titleClassName}>{activePeriod.title}</h2>
 
                 <div ref={dropdownRef} className="relative shrink-0">

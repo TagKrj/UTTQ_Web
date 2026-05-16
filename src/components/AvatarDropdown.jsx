@@ -178,7 +178,7 @@ export default function AvatarDropdown({
             <div
                 role="menu"
                 aria-label="Menu tài khoản"
-                className={`absolute right-0 top-[calc(100%+12px)] z-[70] w-64 origin-top-right overflow-hidden rounded-2xl border border-[#efeef5] bg-white shadow-[0_20px_60px_rgba(17,12,46,0.15)] transition-all duration-200 ease-out dark:border-[#2a2146] dark:bg-[#1c1533] ${dropdownAnimation}`}
+                className={`fixed left-4 right-4 top-[138px] z-[70] origin-top-right overflow-hidden rounded-2xl border border-[#efeef5] bg-white shadow-[0_20px_60px_rgba(17,12,46,0.15)] transition-all duration-200 ease-out dark:border-[#2a2146] dark:bg-[#1c1533] sm:absolute sm:left-auto sm:right-0 sm:top-[calc(100%+12px)] sm:w-64 ${dropdownAnimation}`}
             >
                 <div className="flex items-center gap-3 px-4 pb-3 pt-4">
                     <div className="h-11 w-11 overflow-hidden rounded-full ring-2 ring-[#6A5AE0]/20">

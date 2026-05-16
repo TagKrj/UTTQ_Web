@@ -99,8 +99,8 @@ export default function ReviewResultsStats() {
     const chartContentMinWidth = shouldAllowHorizontalScroll ? `${activePeriod.bars.length * 72}px` : undefined;
 
     return (
-        <div className="w-full rounded-[20px] bg-white px-8 pb-8 pt-3 shadow-[0_0_8px_rgba(0,0,0,0.06)] w-full max-w-[878px] h-[435px]">
-            <div className="flex items-center gap-3">
+        <div className="h-auto min-h-[435px] w-full max-w-none rounded-[20px] bg-white px-4 pb-6 pt-4 shadow-[0_0_8px_rgba(0,0,0,0.06)] sm:h-[435px] sm:max-w-[878px] sm:px-8 sm:pb-8 sm:pt-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                 <h2 className="flex-1 text-[20px] font-bold leading-tight tracking-[-0.01em] text-[#343a40]">
                     Thống kê kết quả ôn tập
                 </h2>

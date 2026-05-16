@@ -121,7 +121,7 @@ export default function Account() {
     };
 
     return (
-        <div className="thin-scrollbar flex h-full w-full flex-col overflow-auto rounded-[20px] border border-[#E5E7EB] bg-white px-8 py-7 shadow-[0_0_8px_rgba(0,0,0,0.05)]">
+        <div className="thin-scrollbar flex h-full w-full flex-col overflow-auto rounded-[20px] border border-[#E5E7EB] bg-white px-4 py-5 shadow-[0_0_8px_rgba(0,0,0,0.05)] sm:px-8 sm:py-7">
             <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
                 <section className="rounded-[24px] bg-[#f7f7ff] px-7 py-7">
                     <div className="flex flex-wrap items-center gap-5">
