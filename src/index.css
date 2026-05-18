@@ -44,7 +44,8 @@ body {
     background: var(--app-bg);
     color: var(--app-text);
     min-width: 0;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
 }
 
 #root {
@@ -127,6 +128,7 @@ canvas {
 }
 
 .thin-scrollbar {
+    -webkit-overflow-scrolling: touch;
     scrollbar-gutter: stable;
     scrollbar-width: thin;
     scrollbar-color: rgba(113, 82, 243, 0.28) transparent;

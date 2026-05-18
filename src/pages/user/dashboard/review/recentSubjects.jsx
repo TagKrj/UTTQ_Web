@@ -42,7 +42,7 @@ function RecentReviewCard({ activity, onClick }) {
         <button
             type="button"
             onClick={onClick}
-            className="grid cursor-pointer grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_120px_120px] items-center gap-4 rounded-[14px] border border-[#efeefc] bg-white px-5 py-4 text-left shadow-[0_8px_22px_rgba(17,24,39,0.03)] transition-colors hover:bg-[#f7f6ff]"
+            className="flex cursor-pointer flex-col gap-4 rounded-[14px] border border-[#efeefc] bg-white px-4 py-4 text-left shadow-[0_8px_22px_rgba(17,24,39,0.03)] transition-colors hover:bg-[#f7f6ff] sm:grid sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_100px_110px] sm:items-center sm:gap-4 sm:px-5 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_120px_120px]"
         >
             <div className="min-w-0">
                 <p className="truncate text-[15px] font-semibold text-[#212121]">
@@ -53,24 +53,24 @@ function RecentReviewCard({ activity, onClick }) {
                 </p>
             </div>
 
-            <div className="min-w-0">
-                <span className="inline-flex rounded-full bg-[#edeafe] px-3 py-1 text-[12px] font-semibold text-[#6A5AE0]">
+            <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2 sm:block">
+                <span className="inline-flex max-w-full rounded-full bg-[#edeafe] px-3 py-1 text-[12px] font-semibold leading-4 text-[#6A5AE0]">
                     {TYPE_LABELS[activity.type] ?? 'Ôn tập'}
                 </span>
-                <p className="mt-2 flex items-center gap-1.5 text-[12px] text-[#858494]">
+                <p className="flex items-center gap-1.5 text-[12px] text-[#858494] sm:mt-2">
                     <img src={ClockIcon} alt="" aria-hidden="true" className="h-4 w-4" />
                     {formatDuration(activity.durationSeconds)}
                 </p>
             </div>
 
-            <div>
+            <div className="min-w-0">
                 <p className="text-[13px] text-[#858494]">Kết quả</p>
                 <p className="mt-1 text-[15px] font-semibold text-[#212121]">
                     {isScoreActivity ? `${activity.correctCount}/${activity.totalItems}` : `${activity.progress}%`}
                 </p>
             </div>
 
-            <div>
+            <div className="min-w-0">
                 <p className="text-[13px] text-[#858494]">Thời điểm</p>
                 <p className="mt-1 text-[13px] font-medium text-[#212121]">
                     {formatDateTime(activity.completedAt)}

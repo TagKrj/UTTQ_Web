@@ -229,10 +229,11 @@ export default function Account() {
                             <button
                                 type="button"
                                 onClick={() => updateNotificationSetting({ enabled: !notificationSettings.enabled })}
-                                className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${notificationSettings.enabled ? 'bg-[#7152f3]' : 'bg-[#d7d8e2]'}`}
+                                className={`relative h-7 w-12 shrink-0 overflow-hidden rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[#7152f3]/30 focus:ring-offset-2 ${notificationSettings.enabled ? 'bg-[#7152f3]' : 'bg-[#d7d8e2]'}`}
                                 aria-pressed={notificationSettings.enabled}
+                                aria-label="Bật nhắc nhở hàng ngày"
                             >
-                                <span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-transform ${notificationSettings.enabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                                <span className={`absolute left-1 top-1 h-5 w-5 rounded-full bg-white shadow transition-transform ${notificationSettings.enabled ? 'translate-x-5' : 'translate-x-0'}`} />
                             </button>
                         </div>
                     </div>

@@ -70,7 +70,7 @@ export default function MainLayout({ children }) {
                 <div className="flex min-w-0 flex-1 flex-col lg:px-2">
                     <div className="flex h-full w-full min-w-0 flex-col gap-3 rounded-lg sm:gap-5">
                         <TopBar onMenuClick={() => setIsSidebarOpen(true)} />
-                        <div className="min-h-0 flex-1 overflow-auto">
+                        <div className="thin-scrollbar min-h-0 flex-1 overflow-auto">
                             {content}
                         </div>
                     </div>

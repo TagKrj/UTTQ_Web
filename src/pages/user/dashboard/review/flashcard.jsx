@@ -11,10 +11,6 @@ import {
     getReviewSubjectById,
 } from '../../../../utils/reviewSubjects';
 import {
-    getOrCreateFlashcardSetByDocument,
-    normalizeFlashcardSet,
-} from '../../../../services/flashcardsService';
-import {
     getOrCreateTrueFalseQuestionsByDocument,
     normalizeTrueFalseQuestions,
 } from '../../../../services/trueFalseService';
@@ -300,7 +296,7 @@ export default function FlashcardReview() {
     const documentId = getExerciseDocumentId(exercise);
     const subjectTitle = subject.title ?? subject.name ?? 'Môn học';
     const exerciseTitle = exercise?.title ?? 'Bài ôn tập';
-    const reviewTitle = isTrueFalseMode ? 'Ôn tập đúng / sai' : 'Ôn tập flashcard';
+    const reviewTitle = isTrueFalseMode ? 'Ôn tập đúng / sai' : 'Ôn tập flashcard đúng / sai';
     const [flashcards, setFlashcards] = useState(FLASHCARDS);
     const [isLoadingFlashcards, setIsLoadingFlashcards] = useState(true);
     const [flashcardError, setFlashcardError] = useState('');
@@ -325,7 +321,7 @@ export default function FlashcardReview() {
         async function loadFlashcards() {
             if (!documentId) {
                 setIsLoadingFlashcards(false);
-                setFlashcardError(`Bài tập này chưa có mã tài liệu từ backend. Vui lòng tải lại file PDF để sinh ${isTrueFalseMode ? 'câu đúng/sai' : 'flashcard'}.`);
+                setFlashcardError('Bài tập này chưa có mã tài liệu từ backend. Vui lòng tải lại file PDF để sinh câu đúng/sai.');
                 return;
             }
 
@@ -340,21 +336,21 @@ export default function FlashcardReview() {
             hasRecordedActivityRef.current = false;
 
             try {
-                const normalizedCards = isTrueFalseMode
-                    ? normalizeTrueFalseQuestions(await getOrCreateTrueFalseQuestionsByDocument(documentId))
-                    : normalizeFlashcardSet(await getOrCreateFlashcardSetByDocument(documentId)).cards;
+                const normalizedCards = normalizeTrueFalseQuestions(
+                    await getOrCreateTrueFalseQuestionsByDocument(documentId),
+                );
 
                 if (!isMounted) return;
 
                 if (normalizedCards.length === 0) {
-                    throw new Error(isTrueFalseMode ? 'Chưa có câu đúng/sai nào.' : 'Bộ flashcard chưa có thẻ nào.');
+                    throw new Error('Chưa có câu đúng/sai nào.');
                 }
 
                 setFlashcards(normalizedCards);
                 setCardResponses(Array(normalizedCards.length).fill(null));
             } catch (error) {
                 if (!isMounted) return;
-                setFlashcardError(error?.message || (isTrueFalseMode ? 'Không thể tải câu đúng/sai.' : 'Không thể tải flashcard.'));
+                setFlashcardError(error?.message || 'Không thể tải câu đúng/sai.');
                 setFlashcards([]);
                 setCardResponses([]);
             } finally {
@@ -437,7 +433,7 @@ export default function FlashcardReview() {
     }
 
     function handleCardPointerDown(event) {
-        if (isTrueFalseMode || phase !== 'practice' || selectedAnswer || !activeCard) {
+        if (phase !== 'practice' || selectedAnswer || !activeCard) {
             return;
         }
 
@@ -483,7 +479,7 @@ export default function FlashcardReview() {
     }
 
     function handleCardKeyDown(event) {
-        if (isTrueFalseMode || phase !== 'practice' || selectedAnswer || !activeCard) {
+        if (phase !== 'practice' || selectedAnswer || !activeCard) {
             return;
         }
 
@@ -592,7 +588,7 @@ export default function FlashcardReview() {
 
             {isLoadingFlashcards ? (
                 <div className="mt-8 rounded-[18px] bg-[#f7f7ff] px-5 py-6 text-[14px] text-[#858494]">
-                    {isTrueFalseMode ? 'Đang tải câu đúng/sai...' : 'Đang tải flashcard...'}
+                    Đang tải câu đúng/sai...
                 </div>
             ) : flashcardError ? (
                 <div className="mt-8 rounded-[18px] bg-[#fef2f2] px-5 py-6 text-[14px] text-[#b42318]">
@@ -600,7 +596,7 @@ export default function FlashcardReview() {
                 </div>
             ) : !activeCard ? (
                 <div className="mt-8 rounded-[18px] bg-[#f7f7ff] px-5 py-6 text-[14px] text-[#858494]">
-                    {isTrueFalseMode ? 'Chưa có câu đúng/sai nào.' : 'Bộ flashcard chưa có thẻ nào.'}
+                    Chưa có câu đúng/sai nào.
                 </div>
             ) : phase !== 'result' ? (
                 <div className="flex min-h-0 flex-1 flex-col pb-2">
@@ -631,56 +627,48 @@ export default function FlashcardReview() {
                     </div>
 
                     <div
-                        role={!isTrueFalseMode ? 'button' : undefined}
-                        tabIndex={!isTrueFalseMode ? 0 : undefined}
-                        aria-label={!isTrueFalseMode ? 'Gạt trái là đúng, gạt phải là sai' : undefined}
+                        role="button"
+                        tabIndex={0}
+                        aria-label="Gạt trái là đúng, gạt phải là sai"
                         onPointerDown={handleCardPointerDown}
                         onPointerMove={handleCardPointerMove}
                         onPointerUp={handleCardPointerUp}
                         onPointerCancel={resetCardDrag}
                         onKeyDown={handleCardKeyDown}
                         className={joinClassNames(
-                            'mt-6 rounded-[30px] border-2 border-dashed border-[#7b6df4] bg-[#ecebff] px-4 py-8 shadow-[0_18px_55px_rgba(106,90,224,0.06)] transition-shadow sm:px-8 sm:py-10',
-                            !isTrueFalseMode && phase === 'practice' ? 'touch-none select-none cursor-grab active:cursor-grabbing' : '',
+                            'mt-4 rounded-[26px] border-2 border-dashed border-[#7b6df4] bg-[#ecebff] px-4 py-5 shadow-[0_14px_44px_rgba(106,90,224,0.05)] transition-shadow sm:px-7 sm:py-6',
+                            phase === 'practice' ? 'touch-none select-none cursor-grab active:cursor-grabbing' : '',
                         )}
                         style={{
-                            transform: !isTrueFalseMode
-                                ? `translateX(${dragOffsetX}px) rotate(${cardRotation}deg)`
-                                : undefined,
+                            transform: `translateX(${dragOffsetX}px) rotate(${cardRotation}deg)`,
                             transition: dragStateRef.current.isDragging ? 'none' : 'transform 180ms ease',
                         }}
                     >
-                        <div className="relative min-h-[206px] rounded-3xl">
-                            {!isTrueFalseMode ? (
-                                <>
-                                    <span className={joinClassNames(
-                                        'absolute left-0 top-12 rounded-full border px-4 py-1 text-[12px] font-semibold uppercase tracking-[0.4px] transition-opacity',
-                                        swipeHint === 'correct' ? 'border-[#4AAF57] bg-white text-[#4AAF57] opacity-100' : 'opacity-0',
-                                    )}>
-                                        Trái: Đúng
-                                    </span>
-                                    <span className={joinClassNames(
-                                        'absolute right-0 top-12 rounded-full border px-4 py-1 text-[12px] font-semibold uppercase tracking-[0.4px] transition-opacity',
-                                        swipeHint === 'wrong' ? 'border-[#f75555] bg-white text-[#f75555] opacity-100' : 'opacity-0',
-                                    )}>
-                                        Phải: Sai
-                                    </span>
-                                </>
-                            ) : null}
+                        <div className="relative min-h-[150px] rounded-3xl">
+                            <span className={joinClassNames(
+                                'absolute left-0 top-10 rounded-full border px-4 py-1 text-[12px] font-semibold uppercase tracking-[0.4px] transition-opacity',
+                                swipeHint === 'correct' ? 'border-[#4AAF57] bg-white text-[#4AAF57] opacity-100' : 'opacity-0',
+                            )}>
+                                Trái: Đúng
+                            </span>
+                            <span className={joinClassNames(
+                                'absolute right-0 top-10 rounded-full border px-4 py-1 text-[12px] font-semibold uppercase tracking-[0.4px] transition-opacity',
+                                swipeHint === 'wrong' ? 'border-[#f75555] bg-white text-[#f75555] opacity-100' : 'opacity-0',
+                            )}>
+                                Phải: Sai
+                            </span>
                             <span className="absolute left-0 top-0 inline-flex rounded-full bg-white px-4 py-1 text-[12px] font-semibold uppercase tracking-[0.4px] text-[#51545f] shadow-[0_1px_2px_rgba(17,24,39,0.08)]">
                                 {activeCard.badge}
                             </span>
 
-                            <div className="flex min-h-[206px] flex-col items-center justify-center px-5 text-center">
-                                <p className="max-w-[520px] text-[18px] font-medium leading-7 text-[#1d1830] whitespace-pre-line">
+                            <div className="flex min-h-[150px] flex-col items-center justify-center px-4 text-center">
+                                <p className="max-w-[640px] text-[20px] font-semibold leading-8 text-[#1d1830] whitespace-pre-line">
                                     {activeCard.prompt}
                                 </p>
 
-                                {!isTrueFalseMode && activeCard.answer ? (
-                                    <p className="mt-2 max-w-[520px] text-[18px] font-semibold leading-7 text-[#6A5AE0] whitespace-pre-line">
-                                        {activeCard.answer}
-                                    </p>
-                                ) : null}
+                                <p className="mt-3 text-[13px] font-semibold uppercase tracking-[0.4px] text-[#6A5AE0]">
+                                    Gạt trái nếu nhận định đúng, gạt phải nếu nhận định sai
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -691,10 +679,10 @@ export default function FlashcardReview() {
                         </p>
                     </div>
 
-                    <div className="mt-8 flex items-center justify-center gap-5 sm:gap-10">
+                    <div className="mt-5 flex items-center justify-center gap-5 sm:gap-10">
                         <DecisionButton
                             iconSrc={YesIcon}
-                            label={isTrueFalseMode ? 'Đúng' : 'Trái: Đúng'}
+                            label="Trái: Đúng"
                             active={selectedAnswer === 'correct'}
                             muted={phase === 'feedback' && selectedAnswer !== 'correct'}
                             disabled={phase !== 'practice'}
@@ -708,7 +696,7 @@ export default function FlashcardReview() {
 
                         <DecisionButton
                             iconSrc={NoIcon}
-                            label={isTrueFalseMode ? 'Sai' : 'Phải: Sai'}
+                            label="Phải: Sai"
                             active={selectedAnswer === 'wrong'}
                             muted={phase === 'feedback' && selectedAnswer !== 'wrong'}
                             disabled={phase !== 'practice'}
@@ -719,33 +707,27 @@ export default function FlashcardReview() {
 
                     {phase === 'feedback' ? (
                         <div className={joinClassNames(
-                            'mt-6 mx-auto w-full max-w-[520px] rounded-[30px] px-6 py-7 text-center',
+                            'mt-4 mx-auto w-full max-w-[560px] rounded-[26px] px-6 py-5 text-center',
                             isUserCorrect ? 'bg-[#dff5df]' : 'bg-[#fce2e2]',
                         )}>
                             <p className={joinClassNames(
                                 'text-[18px] font-semibold leading-7',
                                 isUserCorrect ? 'text-[#4AAF57]' : 'text-[#f75555]',
                             )}>
-                                {isTrueFalseMode
-                                    ? `Bạn đã trả lời ${isUserCorrect ? 'đúng' : 'sai'}`
-                                    : selectedAnswer === 'correct'
-                                        ? 'Đã ghi nhận là đúng'
-                                        : 'Đã ghi nhận là sai'}
+                                Bạn đã trả lời {isUserCorrect ? 'đúng' : 'sai'}
                             </p>
-                            {isTrueFalseMode ? (
-                                <p className={joinClassNames(
-                                    'mt-1 text-[16px] leading-7 text-[#96a0a8]',
-                                )}>
-                                    Nhận định này là <span className={joinClassNames('font-semibold', isDefinitionCorrect ? 'text-[#4AAF57]' : 'text-[#f75555]')}>
-                                        {isDefinitionCorrect ? 'ĐÚNG' : 'SAI'}
+                            <p className={joinClassNames(
+                                'mt-1 text-[16px] leading-7 text-[#96a0a8]',
+                            )}>
+                                Nhận định này là <span className={joinClassNames('font-semibold', isDefinitionCorrect ? 'text-[#4AAF57]' : 'text-[#f75555]')}>
+                                    {isDefinitionCorrect ? 'ĐÚNG' : 'SAI'}
+                                </span>
+                                {activeCard.explanation ? (
+                                    <span className="mt-2 block text-[14px] leading-6 text-[#6b7280]">
+                                        {activeCard.explanation}
                                     </span>
-                                    {activeCard.explanation ? (
-                                        <span className="mt-2 block text-[14px] leading-6 text-[#6b7280]">
-                                            {activeCard.explanation}
-                                        </span>
-                                    ) : null}
-                                </p>
-                            ) : null}
+                                ) : null}
+                            </p>
                         </div>
                     ) : null}
                 </div>
@@ -767,10 +749,10 @@ export default function FlashcardReview() {
 
                         <div className="pt-14 text-center">
                             <p className="text-[19px] font-semibold leading-7 text-[#1d1830]">
-                                {isTrueFalseMode ? 'Bạn đã trả lời đúng' : 'Bạn đã ghi nhớ'}
+                                Bạn đã trả lời đúng
                             </p>
                             <p className="mt-1 text-[20px] font-semibold leading-7 text-[#6A5AE0]">
-                                {correctCount}/{flashcards.length} {isTrueFalseMode ? 'câu' : 'thẻ'}
+                                {correctCount}/{flashcards.length} câu
                             </p>
                         </div>
 
@@ -791,9 +773,7 @@ export default function FlashcardReview() {
                     </div>
 
                     <div className="sr-only">
-                        {isTrueFalseMode
-                            ? `Đã trả lời đúng ${correctCount} trên ${flashcards.length} câu. Đã trả lời sai ${wrongCount} câu.`
-                            : `Đã ghi nhớ ${correctCount} trên ${flashcards.length} thẻ. Cần ôn lại ${wrongCount} thẻ.`}
+                        Đã trả lời đúng {correctCount} trên {flashcards.length} câu. Đã trả lời sai {wrongCount} câu.
                     </div>
                 </div>
             )}

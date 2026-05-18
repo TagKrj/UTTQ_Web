@@ -1,5 +1,5 @@
 import API_ENDPOINTS from '../config/api';
-import { getStoredAuth } from './authService';
+import { getStoredAuth, handleSessionExpired } from './authService';
 
 const trueFalseRequests = new Map();
 
@@ -40,6 +40,10 @@ async function requestJson(url, { method = 'GET', token } = {}) {
     const payload = await response.json().catch(() => null);
 
     if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+            handleSessionExpired();
+        }
+
         throw new Error(getErrorMessage(payload, 'Không thể tải câu đúng/sai.'));
     }
 

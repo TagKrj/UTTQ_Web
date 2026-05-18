@@ -1,5 +1,5 @@
 import API_ENDPOINTS from '../config/api';
-import { getStoredAuth } from './authService';
+import { getStoredAuth, handleSessionExpired } from './authService';
 
 function isClient() {
     return typeof window !== 'undefined';
@@ -60,6 +60,10 @@ async function requestJson(url, { method = 'GET', token, body, headers } = {}) {
     const payload = await parseJson(response);
 
     if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+            handleSessionExpired();
+        }
+
         throw new Error(getErrorMessage(payload, 'Không thể tải dữ liệu tài liệu.'));
     }
 
@@ -99,6 +103,10 @@ export async function uploadDocument({ file, title, token }) {
     const payload = await parseJson(response);
 
     if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+            handleSessionExpired();
+        }
+
         throw new Error(getErrorMessage(payload, 'Tải lên thất bại.'));
     }
 

@@ -1,6 +1,8 @@
 import API_ENDPOINTS from '../config/api';
 
 const AUTH_STORAGE_KEY = 'myweb.auth';
+const SESSION_EXPIRED_MESSAGE = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+const SESSION_EXPIRED_REDIRECT = '/landing';
 
 function isClient() {
 	return typeof window !== 'undefined';
@@ -28,6 +30,61 @@ function resolveApiPayload(payload) {
 	return payload?.data ?? payload;
 }
 
+function decodeBase64Url(value) {
+	const base64 = value.replace(/-/g, '+').replace(/_/g, '/');
+	const paddedBase64 = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=');
+
+	return window.atob(paddedBase64);
+}
+
+function getJwtPayload(token) {
+	if (!isClient() || typeof token !== 'string') {
+		return null;
+	}
+
+	const [, payload] = token.split('.');
+
+	if (!payload) {
+		return null;
+	}
+
+	try {
+		return JSON.parse(decodeBase64Url(payload));
+	} catch {
+		return null;
+	}
+}
+
+export function isAccessTokenExpired(token) {
+	const payload = getJwtPayload(token);
+
+	if (!payload?.exp) {
+		return false;
+	}
+
+	return Date.now() >= payload.exp * 1000;
+}
+
+export function handleSessionExpired(message = SESSION_EXPIRED_MESSAGE) {
+	if (!isClient()) {
+		return;
+	}
+
+	clearStoredAuth();
+
+	if (window.__mywebSessionExpiredHandled) {
+		return;
+	}
+
+	window.__mywebSessionExpiredHandled = true;
+	window.dispatchEvent(new CustomEvent('myweb:session-expired'));
+	window.alert(message);
+
+	if (window.location.pathname !== SESSION_EXPIRED_REDIRECT) {
+		window.location.replace(SESSION_EXPIRED_REDIRECT);
+	}
+}
+
 function normalizeAuthPayload(payload) {
 	const authPayload = resolveApiPayload(payload);
 
@@ -47,7 +104,14 @@ export function getStoredAuth() {
 		return null;
 	}
 
-	return readAuthFromStorage(window.localStorage) ?? readAuthFromStorage(window.sessionStorage);
+	const storedAuth = readAuthFromStorage(window.localStorage) ?? readAuthFromStorage(window.sessionStorage);
+
+	if (storedAuth?.accessToken && isAccessTokenExpired(storedAuth.accessToken)) {
+		handleSessionExpired();
+		return null;
+	}
+
+	return storedAuth;
 }
 
 export function saveStoredAuth(auth, rememberMe = false) {
@@ -55,6 +119,7 @@ export function saveStoredAuth(auth, rememberMe = false) {
 		return;
 	}
 
+	window.__mywebSessionExpiredHandled = false;
 	clearStoredAuth();
 
 	const storage = rememberMe ? window.localStorage : window.sessionStorage;
@@ -168,6 +233,10 @@ export async function logout() {
 	const payload = await response.json().catch(() => null);
 
 	if (!response.ok) {
+		if (response.status === 401 || response.status === 403) {
+			handleSessionExpired();
+		}
+
 		throw new Error(payload?.message || payload?.error || 'Đăng xuất thất bại.');
 	}
 

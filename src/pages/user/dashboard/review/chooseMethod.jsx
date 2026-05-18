@@ -39,7 +39,7 @@ const METHOD_CARDS = [
     {
         key: 'flashcard',
         title: 'Flashcard',
-        subtitle: 'Ghi nhớ nhanh bằng mặt trước và mặt sau',
+        subtitle: 'Đọc nhận định và gạt trái/phải để chọn đúng hoặc sai',
         buttonLabel: 'Luyện tập',
         imageSrc: FlashcardImage,
         imageAlt: 'Flashcard',

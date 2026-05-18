@@ -24,7 +24,7 @@ export default function ReviewLayout() {
     const isSubjectTabActive = location.pathname === '/review' || (location.pathname.startsWith('/review/') && !isRecentTabActive);
 
     return (
-        <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-[20px] border border-[#E5E7EB] bg-white px-4 py-4 sm:px-6 sm:py-5">
+        <div className="thin-scrollbar flex h-full min-h-0 flex-col overflow-x-hidden overflow-y-auto rounded-[20px] border border-[#E5E7EB] bg-white px-4 py-4 sm:px-6 sm:py-5">
             <div className="overflow-x-auto border-b border-[#F3F4F6] thin-scrollbar">
                 <div className="flex min-w-max items-end gap-6 sm:gap-10">
                     <ReviewTabLink to="/review" icon={ReviewTabIcon} label="Danh sách môn học" active={isSubjectTabActive} />

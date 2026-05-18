@@ -1,5 +1,5 @@
 import API_ENDPOINTS from '../config/api';
-import { getStoredAuth, updateStoredAuthUser } from './authService';
+import { getStoredAuth, handleSessionExpired, updateStoredAuthUser } from './authService';
 
 const AVATAR_STORAGE_KEY = 'uttq.user.avatars.v1';
 const AVATAR_EVENT = 'uttq:avatar-updated';
@@ -87,6 +87,10 @@ async function updateBackendAvatar(avatarUrl) {
     const payload = await response.json().catch(() => null);
 
     if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+            handleSessionExpired();
+        }
+
         throw new Error(payload?.message || payload?.error || 'Không thể lưu avatar lên máy chủ.');
     }
 

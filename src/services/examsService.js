@@ -1,5 +1,5 @@
 import API_ENDPOINTS from '../config/api';
-import { getStoredAuth } from './authService';
+import { getStoredAuth, handleSessionExpired } from './authService';
 
 function getAccessToken(token) {
     if (token) return token;
@@ -43,6 +43,10 @@ async function requestJson(url, { method = 'GET', token } = {}) {
     const payload = await parseJson(response);
 
     if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+            handleSessionExpired();
+        }
+
         throw new Error(getErrorMessage(payload, 'Không thể tải đề trắc nghiệm.'));
     }
 

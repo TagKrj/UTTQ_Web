@@ -40,17 +40,21 @@ function SettingSwitch({ title, description, checked, onChange }) {
     );
 }
 
-function ThemeCard({ label, description, active, onClick, previewClassName }) {
+function ThemeCard({ label, description, active, onClick, previewClassName, activeClassName, inactiveClassName }) {
+    const cardClassName = active
+        ? activeClassName
+        : inactiveClassName ?? 'border-[#efeefc] bg-white hover:bg-[#f8f6ff]';
+
     return (
         <button
             type="button"
             onClick={onClick}
             aria-pressed={active}
-            className={`flex min-h-[132px] flex-1 flex-col justify-between rounded-2xl border px-5 py-4 text-left transition-all ${active ? 'border-[#7152f3] bg-[#f4f1ff] shadow-[0_12px_30px_rgba(113,82,243,0.14)]' : 'border-[#efeefc] bg-white hover:bg-[#f8f6ff]'}`}
+            className={`flex min-h-[132px] flex-1 flex-col justify-between rounded-2xl border px-5 py-4 text-left transition-all ${cardClassName}`}
         >
             <span>
-                <span className="block text-[16px] font-semibold text-[#212121]">{label}</span>
-                <span className="mt-1 block text-[13px] leading-5 text-[#858494]">{description}</span>
+                <span className={`block text-[16px] font-semibold ${active ? 'text-current' : 'text-[#212121]'}`}>{label}</span>
+                <span className={`mt-1 block text-[13px] leading-5 ${active ? 'text-current opacity-75' : 'text-[#858494]'}`}>{description}</span>
             </span>
 
             <span className={`mt-4 flex h-9 w-full items-center gap-2 rounded-xl px-3 ${previewClassName}`}>
@@ -129,6 +133,7 @@ export default function Setting() {
                         active={theme === 'light'}
                         onClick={() => setTheme('light')}
                         previewClassName="bg-white text-[#212121] ring-1 ring-[#efeefc]"
+                        activeClassName="border-[#7152f3] bg-[#f4f1ff] text-[#212121] shadow-[0_12px_30px_rgba(113,82,243,0.14)]"
                     />
                     <ThemeCard
                         label="Tối"
@@ -136,6 +141,7 @@ export default function Setting() {
                         active={theme === 'dark'}
                         onClick={() => setTheme('dark')}
                         previewClassName="bg-[#171a2b] text-white ring-1 ring-[#2a3047]"
+                        activeClassName="border-[#7152f3] bg-[#171a2b] text-white shadow-[0_12px_30px_rgba(113,82,243,0.22)]"
                     />
                 </div>
             </section>

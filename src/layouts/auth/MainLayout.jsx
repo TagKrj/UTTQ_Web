@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import LogoIcon from '../../assets/icons/Logo.svg';
 import HeroImage from '../../assets/imgs/hero.png';
 
@@ -27,7 +28,13 @@ export default function MainLayout({ children }) {
             </div>
 
             {/* Right Side - Login Form */}
-            <div className="w-full lg:w-[63%] ml-auto bg-white flex flex-col justify-center items-center px-6 lg:px-32 py-12 lg:rounded-bl-[50px] lg:rounded-tl-[50px] shadow-[-5px_0px_32.1px_4px_rgba(0,0,0,0.15)] z-10">
+            <div className="relative w-full lg:w-[63%] ml-auto bg-white flex flex-col justify-center items-center px-6 lg:px-32 py-12 lg:rounded-bl-[50px] lg:rounded-tl-[50px] shadow-[-5px_0px_32.1px_4px_rgba(0,0,0,0.15)] z-10">
+                <Link
+                    to="/landing"
+                    className="absolute right-5 top-5 rounded-full border border-[#EDEFFF] bg-white px-4 py-2 text-[13px] font-semibold text-[#6A5AE0] shadow-[0_8px_20px_rgba(106,90,224,0.10)] transition-colors hover:bg-[#F4F1FF] sm:right-8 sm:top-8 sm:text-[14px]"
+                >
+                    Về trang chủ
+                </Link>
                 {children}
             </div>
         </div>
